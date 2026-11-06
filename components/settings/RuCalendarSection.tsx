@@ -61,7 +61,7 @@ export function RuCalendarSection(props: Props) {
             <SettingsRow
               icon="cloud-sync-outline"
               title="Обновлять из интернета"
-              subtitle={`Переносы и праздники подтягиваются автоматически раз в неделю\n${syncSubtitle}`}
+              subtitle={`Переносы и праздники подтягиваются автоматически раз в месяц\n${syncSubtitle}`}
               value={sync.state === 'loading' ? undefined : 'Обновить'}
               onPress={() => {
                 haptic.selection();

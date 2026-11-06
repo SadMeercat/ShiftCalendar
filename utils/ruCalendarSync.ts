@@ -9,7 +9,7 @@
  *      «+» — перенесённый выходной.
  *
  * Загруженное сохраняется на телефоне и используется без интернета. Текущий и
- * следующий год перепроверяются раз в неделю, чтобы подхватить новое постановление
+ * следующий год перепроверяются раз в месяц (30 дней), чтобы подхватить новое постановление
  * о переносах (его обычно публикуют осенью). Если данные не прошли проверку или
  * сети нет, остаются встроенные данные и правила ТК РФ.
  */
@@ -18,7 +18,8 @@ import { daysInMonth } from './dates';
 import { builtInYearCodes, isLawHoliday, setRemoteYear } from './ruCalendar';
 
 export const RU_CALENDAR_CACHE_KEY = 'ru_calendar_cache';
-const REFRESH_MS = 7 * 24 * 3600 * 1000;
+/** Как часто перепроверять текущий и следующий год. */
+const REFRESH_MS = 30 * 24 * 3600 * 1000;
 const RETRY_MS = 6 * 3600 * 1000;
 const TIMEOUT_MS = 10000;
 
@@ -158,7 +159,7 @@ function summarize(cache: CacheFile, years: number[]): RuSyncStatus['years'] {
 
 /**
  * Подгружает кэш и при необходимости обновляет календарь из интернета.
- * `force` — проверить сейчас, не дожидаясь недельного интервала.
+ * `force` — проверить сейчас, не дожидаясь месячного интервала.
  */
 export function syncRuCalendar(force = false): Promise<void> {
   if (running) return running;
