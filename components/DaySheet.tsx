@@ -12,6 +12,7 @@ import { ThemeColors } from '../constants/colors';
 import { Radius } from '../constants/theme';
 import { fromDateKey, todayKey } from '../utils/dates';
 import { getRuDayInfo } from '../utils/ruCalendar';
+import { useRuCalendarVersion } from '../hooks/useRuCalendar';
 import { formatHours, formatTimeRange } from '../utils/time';
 import { readableTextColor, withAlpha } from '../utils/color';
 import { haptic } from '../utils/haptics';
@@ -73,6 +74,7 @@ function ShiftOption({
 
 function DayContent({ dateKey, onToast, onClose }: { dateKey: string; onToast: Props['onToast']; onClose: () => void }) {
   const { colors, timeFormat, ruCalendar, weeklyHours } = useAppSettings();
+  useRuCalendarVersion();
   const ruDay = ruCalendar ? getRuDayInfo(dateKey) : undefined;
   const {
     shiftData, leaveData, notesData, overtimeData, swapsData, allShifts, leaveTypes, getShiftByCode, getLeaveType,

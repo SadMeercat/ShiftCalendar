@@ -33,6 +33,7 @@ import { MonthPickerModal } from '../../components/calendar/MonthPickerModal';
 import { MonthSummary } from '../../components/calendar/MonthSummary';
 import { RuMonthStrip } from '../../components/calendar/RuMonthStrip';
 import { computeRuWork } from '../../utils/ruWorkTime';
+import { useRuCalendarVersion } from '../../hooks/useRuCalendar';
 import { CalendarSwitcher } from '../../components/CalendarSwitcher';
 import { DaySheet } from '../../components/DaySheet';
 import { QUICK_FILL_COLLAPSED, RepeatSheet } from '../../components/RepeatSheet';
@@ -350,6 +351,7 @@ export default function CalendarScreen() {
     });
   }, [twoPane, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, baseRate, overtimeRate, paidLeaveHours]);
 
+  const ruVersion = useRuCalendarVersion();
   const ruWork = useMemo(() => {
     if (!ruCalendar) return null;
     const m = monthFromIndex(monthIdx);
@@ -357,7 +359,7 @@ export default function CalendarScreen() {
       shifts: shiftData, overtime: overtimeData, leave: leaveData, allShifts, leaveTypes, weeklyHours,
       ...monthRange(m.getFullYear(), m.getMonth()),
     });
-  }, [ruCalendar, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours]);
+  }, [ruCalendar, ruVersion, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours]);
 
   const viewedMonth = monthFromIndex(monthIdx);
   const header =
@@ -396,6 +398,7 @@ export default function CalendarScreen() {
         showTime={showShiftTimes}
         timeFormat={timeFormat}
         ruCalendar={ruCalendar}
+        ruVersion={ruVersion}
         colors={colors}
         isDark={isDark}
         onDayPress={onDayPress}

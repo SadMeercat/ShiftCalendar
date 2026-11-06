@@ -5,12 +5,18 @@
  * предпраздничные дни взяты из постановлений Правительства РФ:
  *   2024 — № 2016 от 10.08.2023, 2025 — № 1335 от 04.10.2024,
  *   2026 — № 1466 от 24.09.2025, 2027 — № 1187 от 17.09.2026.
- * Для годов без данных используется правило ст. 112: праздник, выпавший на
+ * Если приложение загрузило календарь из интернета (см. ruCalendarSync.ts), он заменяет
+ * встроенные данные. Для годов без данных используется правило ст. 112: праздник, выпавший на
  * выходной, переносит выходной на следующий рабочий день (кроме новогодних
  * 1–8 января, их переносит только постановление), а день перед праздником
  * сокращается на час.
  */
 import { addDaysToKey, daysInMonth, fromDateKey, toDateKey } from './dates';
+
+/** Нерабочие праздничные дни по ст. 112 ТК РФ (MM-DD). */
+export function isLawHoliday(mmddKey: string): boolean {
+  return mmddKey in HOLIDAYS;
+}
 
 export type RuDayKind = 'work' | 'weekend' | 'holiday' | 'transfer';
 
@@ -78,12 +84,57 @@ const OFFICIAL: Record<number, YearData> = {
 
 const cache = new Map<number, Map<string, RuDayInfo>>();
 
+/**
+ * Загруженные из интернета коды дней: по символу на каждый день года
+ * ('0' — рабочий, '1' — нерабочий, '2' — сокращённый рабочий).
+ */
+const remote = new Map<number, string>();
+let version = 0;
+const listeners = new Set<() => void>();
+
+/** Подменяет данные года загруженными. Возвращает true, если что-то изменилось. */
+export function setRemoteYear(year: number, codes: string): boolean {
+  if (remote.get(year) === codes) return false;
+  remote.set(year, codes);
+  cache.delete(year);
+  version++;
+  listeners.forEach((l) => l());
+  return true;
+}
+
+export function getRemoteYear(year: number): string | undefined {
+  return remote.get(year);
+}
+
+/** Номер версии данных календаря: меняется после каждой загрузки. */
+export function getRuCalendarVersion(): number {
+  return version;
+}
+
+export function subscribeRuCalendar(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Коды дней года по встроенным данным (для сравнения и проверки загруженного). */
+export function builtInYearCodes(year: number): string {
+  const map = buildYear(year, false);
+  return Array.from(map.values(), (d) => (d.off ? '1' : d.shortened ? '2' : '0')).join('');
+}
+
 function mmdd(key: string) {
   return key.slice(5);
 }
 
-/** Год, для которого есть данные постановления (иначе — расчёт по правилам ТК). */
+/** Год, для которого есть данные постановления (встроенные или загруженные). */
 export function hasOfficialCalendar(year: number): boolean {
+  return year in OFFICIAL || remote.has(year);
+}
+
+/** Есть ли встроенные данные постановления за год. */
+export function hasBuiltInCalendar(year: number): boolean {
   return year in OFFICIAL;
 }
 
@@ -112,7 +163,9 @@ function computeFallback(year: number): YearData {
   return { off, work: [], short };
 }
 
-function buildYear(year: number): Map<string, RuDayInfo> {
+function buildYear(year: number, useRemote = true): Map<string, RuDayInfo> {
+  const codes = useRemote ? remote.get(year) : undefined;
+  if (codes) return buildFromCodes(year, codes);
   const data = OFFICIAL[year] ?? computeFallback(year);
   const off = new Set(data.off);
   const work = new Set(data.work);
@@ -139,6 +192,33 @@ function buildYear(year: number): Map<string, RuDayInfo> {
         holidayName,
         shortened: kind === 'work' && short.has(md),
         workingWeekend: kind === 'work' && weekend,
+      });
+    }
+  }
+  return map;
+}
+
+function buildFromCodes(year: number, codes: string): Map<string, RuDayInfo> {
+  const map = new Map<string, RuDayInfo>();
+  let i = 0;
+  for (let m = 0; m < 12; m++) {
+    const total = daysInMonth(year, m);
+    for (let d = 1; d <= total; d++, i++) {
+      const date = new Date(year, m, d);
+      const key = toDateKey(date);
+      const wd = date.getDay();
+      const weekend = wd === 0 || wd === 6;
+      const off = codes[i] === '1';
+      // Праздничные дни определены законом (ст. 112), а не постановлением о переносах.
+      const holidayName = off ? HOLIDAYS[mmdd(key)] : undefined;
+      const kind: RuDayKind = !off ? 'work' : holidayName ? 'holiday' : weekend ? 'weekend' : 'transfer';
+      map.set(key, {
+        kind,
+        off,
+        holiday: kind === 'holiday',
+        holidayName,
+        shortened: codes[i] === '2',
+        workingWeekend: !off && weekend,
       });
     }
   }

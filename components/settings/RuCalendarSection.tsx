@@ -6,6 +6,14 @@ import { haptic } from '../../utils/haptics';
 import { Segmented, SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
 import { NumberField } from './PayEarningsSection';
+import { useRuSyncStatus } from '../../hooks/useRuCalendar';
+import { syncRuCalendar } from '../../utils/ruCalendarSync';
+
+function formatSyncDate(ts: number) {
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 interface Props {
   colors: ThemeColors;
@@ -24,6 +32,17 @@ interface Props {
 export function RuCalendarSection(props: Props) {
   const { colors } = props;
   const currency = getCurrency(props.currencyCode);
+  const sync = useRuSyncStatus();
+  const syncSubtitle =
+    sync.state === 'loading'
+      ? 'Загрузка…'
+      : [
+          sync.lastSync ? `Обновлено ${formatSyncDate(sync.lastSync)}` : sync.state === 'offline' ? 'Нет связи — используются встроенные данные' : 'Ещё не загружался',
+          sync.years.length ? sync.years.map((y) => `${y.year}: ${y.source}`).join(' · ') : '',
+          sync.error ?? '',
+        ]
+          .filter(Boolean)
+          .join('\n');
   return (
     <>
       <SectionLabel colors={colors}>Производственный календарь РФ</SectionLabel>
@@ -39,6 +58,17 @@ export function RuCalendarSection(props: Props) {
         />
         {props.ruCalendar && (
           <>
+            <SettingsRow
+              icon="cloud-sync-outline"
+              title="Обновлять из интернета"
+              subtitle={`Переносы и праздники подтягиваются автоматически раз в неделю\n${syncSubtitle}`}
+              value={sync.state === 'loading' ? undefined : 'Обновить'}
+              onPress={() => {
+                haptic.selection();
+                syncRuCalendar(true);
+              }}
+              colors={colors}
+            />
             <View style={styles.block}>
               <Text style={[styles.label, { color: colors.text }]}>Рабочая неделя для нормы</Text>
               <Segmented

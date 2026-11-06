@@ -23,6 +23,7 @@ import { MonthlyHoursChart } from '../../components/stats/MonthlyHoursChart';
 import { LeaveMeters } from '../../components/stats/LeaveMeters';
 import { RuWorkCard } from '../../components/stats/RuWorkCard';
 import { useReceivedPay } from '../../hooks/useReceivedPay';
+import { useRuCalendarVersion } from '../../hooks/useRuCalendar';
 import { RuPaySettings, computeRuWork, estimateRuPay, payFromReceived, sumRuPay, sumRuWork } from '../../utils/ruWorkTime';
 import { Card, Divider, EmptyState, Button, Segmented, SectionLabel } from '../../components/ui/primitives';
 import { Tap } from '../../components/ui/Tap';
@@ -66,6 +67,7 @@ function Row({ label, value, colors, strong, swatch, note }: { label: string; va
 export default function StatsScreen() {
   const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart, ruCalendar, weeklyHours, monthlySalary, ndflPercent } = useAppSettings();
   const { received, setMonthReceived } = useReceivedPay();
+  const ruVersion = useRuCalendarVersion();
   const {
     shiftData, overtimeData, leaveData, notesData, leaveBalances, allShifts, leaveTypes, calendars, activeCalendarId, switchCalendar,
   } = useShifts();
@@ -111,7 +113,7 @@ export default function StatsScreen() {
       fromReceived: period === 'month' ? perMonth[0].fromReceived : null,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruCalendar, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, received]);
+  }, [ruCalendar, ruVersion, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, received]);
   const leaveUsed = useMemo(() => leaveUsedInYear(leaveData, year), [leaveData, year]);
 
   const hasRates = baseRate > 0 || overtimeRate > 0;

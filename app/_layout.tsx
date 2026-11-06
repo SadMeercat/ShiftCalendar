@@ -13,6 +13,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Onboarding } from '../components/Onboarding';
 import { useDeepLinkHandler } from '../hooks/useDeepLinkHandler';
 import { useBackgroundSync } from '../hooks/useBackgroundSync';
+import { useRuCalendarAutoSync } from '../hooks/useRuCalendar';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -23,6 +24,7 @@ function AppShell() {
 
   useDeepLinkHandler();
   useBackgroundSync();
+  useRuCalendarAutoSync();
 
   useEffect(() => {
     if (Platform.OS === 'android') {

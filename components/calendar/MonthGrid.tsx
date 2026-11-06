@@ -33,6 +33,8 @@ export interface MonthGridProps {
   timeFormat: TimeFormat;
   /** Показывать выходные и праздники по производственному календарю РФ. */
   ruCalendar?: boolean;
+  /** Меняется после загрузки календаря, чтобы сетка перерисовалась. */
+  ruVersion?: number;
   colors: ThemeColors;
   isDark: boolean;
   onDayPress: (key: string) => void;
