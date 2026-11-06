@@ -22,6 +22,10 @@ export interface RuPaySettings {
   /** Часовая ставка, если оклада нет. */
   hourlyRate: number;
   ndflPercent: number;
+  /** Премия в процентах к окладу — для расчёта месяцев, где сумма не вписана. */
+  bonusPercent: number;
+  /** Праздники и переработка оплачиваются с учётом премии (КС РФ № 35-П). */
+  bonusInExtras: boolean;
   overtimeFirstRate: number;
   overtimeNextRate: number;
   holidayRate: number;
@@ -149,12 +153,20 @@ export function computeRuWork(input: RuWorkInput): RuWorkStats {
 }
 
 export interface RuPayBreakdown {
-  /** Ставка за час. */
+  /** Базовая ставка за час: оклад ÷ норма месяца (или часовая ставка). */
   rate: number;
+  /** Ставка, по которой оплачиваются праздники и переработка (с премией или без). */
+  extrasRate: number;
   /** Откуда ставка: оклад / часовая ставка / вычислена из полученной суммы. */
   rateSource: 'salary' | 'hourly' | 'received' | 'none';
+  /** Премия в процентах к окладу за отработанное время (может быть отрицательной). */
+  bonusPercent: number;
+  /** Часы, оплачиваемые окладом: обычные в пределах нормы + оплачиваемый отпуск. */
+  baseHours: number;
+  /** Оклад за отработанные в пределах нормы часы. */
   regularPay: number;
   paidLeavePay: number;
+  bonusPay: number;
   holidayPay: number;
   overtimePay: number;
   gross: number;
@@ -175,45 +187,79 @@ function weightedHours(w: RuWorkStats, p: RuPaySettings) {
   };
 }
 
-function breakdown(rate: number, source: RuPayBreakdown['rateSource'], w: RuWorkStats, p: RuPaySettings): RuPayBreakdown {
+/**
+ * Начисление при базовой ставке `rate` и премии `k` (доля от оклада, 0.3 = 30%).
+ * Премия начисляется на оклад за отработанное время и отпуск. Если bonusInExtras,
+ * праздники и переработка оплачиваются по ставке с премией (Постановление КС РФ
+ * от 27.06.2023 № 35-П), иначе — по ставке оклада.
+ */
+function breakdown(rate: number, k: number, source: RuPayBreakdown['rateSource'], w: RuWorkStats, p: RuPaySettings): RuPayBreakdown {
   const h = weightedHours(w, p);
+  const baseHours = h.regular + h.leave;
+  const extrasRate = p.bonusInExtras ? rate * (1 + k) : rate;
   const regularPay = rate * h.regular;
   const paidLeavePay = rate * h.leave;
-  const holidayPay = rate * h.holiday;
-  const overtimePay = rate * h.overtime;
-  const gross = regularPay + paidLeavePay + holidayPay + overtimePay;
+  const bonusPay = rate * k * baseHours;
+  const holidayPay = extrasRate * h.holiday;
+  const overtimePay = extrasRate * h.overtime;
+  const gross = regularPay + paidLeavePay + bonusPay + holidayPay + overtimePay;
   const ndfl = gross * (p.ndflPercent / 100);
   return {
     rate: round2(rate),
+    extrasRate: round2(extrasRate),
     rateSource: source,
+    bonusPercent: round1(k * 100),
+    baseHours: round1(baseHours),
     regularPay: round2(regularPay),
     paidLeavePay: round2(paidLeavePay),
+    bonusPay: round2(bonusPay),
     holidayPay: round2(holidayPay),
     overtimePay: round2(overtimePay),
     gross: round2(gross),
     ndfl: round2(ndfl),
     net: round2(gross - ndfl),
-    weightedHours: round1(h.regular + h.leave + h.holiday + h.overtime),
+    weightedHours: round1(baseHours + h.holiday + h.overtime),
   };
 }
 
-/** Расчёт по окладу или часовой ставке из настроек. */
+function baseRate(w: RuWorkStats, p: RuPaySettings): { rate: number; source: RuPayBreakdown['rateSource'] } | null {
+  if (p.monthlySalary > 0 && w.normHours > 0) return { rate: p.monthlySalary / w.normHours, source: 'salary' };
+  if (p.hourlyRate > 0) return { rate: p.hourlyRate, source: 'hourly' };
+  return null;
+}
+
+/** Расчёт по окладу (или часовой ставке) и проценту премии из настроек. */
 export function estimateRuPay(w: RuWorkStats, p: RuPaySettings): RuPayBreakdown {
-  if (p.monthlySalary > 0 && w.normHours > 0) return breakdown(p.monthlySalary / w.normHours, 'salary', w, p);
-  if (p.hourlyRate > 0) return breakdown(p.hourlyRate, 'hourly', w, p);
-  return breakdown(0, 'none', w, p);
+  const base = baseRate(w, p);
+  if (!base) return breakdown(0, 0, 'none', w, p);
+  return breakdown(base.rate, p.bonusPercent / 100, base.source, w, p);
 }
 
 /**
- * Обратный расчёт: по сумме, полученной на руки, находим фактическую ставку в час
- * и раскладываем сумму на обычные часы, праздники и переработку.
+ * Обратный расчёт по сумме, полученной на руки.
+ * Если задан оклад (или ставка), всё, что сверх оклада, праздников и переработки, — это
+ * премия: находим её процент и раскладываем сумму. Без оклада находим только ставку в час.
  */
 export function payFromReceived(received: number, w: RuWorkStats, p: RuPaySettings): RuPayBreakdown | null {
   const h = weightedHours(w, p);
   const total = h.regular + h.leave + h.holiday + h.overtime;
   if (!(received > 0) || total <= 0) return null;
   const gross = received / (1 - Math.min(p.ndflPercent, 99) / 100);
-  return breakdown(gross / total, 'received', w, p);
+  const base = baseRate(w, p);
+  if (!base) return breakdown(gross / total, 0, 'received', w, p);
+
+  const b = base.rate;
+  const baseHours = h.regular + h.leave;
+  const extras = h.holiday + h.overtime;
+  let k: number;
+  if (p.bonusInExtras) {
+    // gross = b·(1+k)·(baseHours + extras)
+    k = gross / (b * total) - 1;
+  } else {
+    // gross = b·(1+k)·baseHours + b·extras
+    k = baseHours > 0 ? (gross - b * extras) / (b * baseHours) - 1 : 0;
+  }
+  return breakdown(b, k, base.source, w, p);
 }
 
 /** Сумма помесячных показателей (переработка считается по каждому месяцу отдельно). */
@@ -227,13 +273,22 @@ export function sumRuWork(list: RuWorkStats[]): RuWorkStats {
 export function sumRuPay(list: RuPayBreakdown[]): RuPayBreakdown | null {
   if (!list.length) return null;
   const s = (f: (p: RuPayBreakdown) => number) => round2(list.reduce((acc, p) => acc + f(p), 0));
-  const weighted = s((p) => p.weightedHours);
+  const baseHours = s((p) => p.baseHours);
+  const salaryPart = s((p) => p.regularPay + p.paidLeavePay);
+  const bonusPay = s((p) => p.bonusPay);
   const gross = s((p) => p.gross);
+  const weighted = s((p) => p.weightedHours);
+  const rate = baseHours > 0 ? salaryPart / baseHours : list[0].rate;
+  const bonusShare = salaryPart > 0 ? bonusPay / salaryPart : 0;
   return {
-    rate: weighted > 0 ? round2(gross / weighted) : 0,
+    rate: round2(rate),
+    extrasRate: round2(list[0].extrasRate === list[0].rate ? rate : rate * (1 + bonusShare)),
     rateSource: list[0].rateSource,
+    bonusPercent: round1(bonusShare * 100),
+    baseHours: round1(baseHours),
     regularPay: s((p) => p.regularPay),
     paidLeavePay: s((p) => p.paidLeavePay),
+    bonusPay,
     holidayPay: s((p) => p.holidayPay),
     overtimePay: s((p) => p.overtimePay),
     gross,

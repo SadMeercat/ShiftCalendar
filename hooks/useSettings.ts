@@ -35,6 +35,10 @@ export interface Settings {
   /** Оклад в месяц до вычета НДФЛ (0 — считать по часовой ставке). */
   monthlySalary: number;
   ndflPercent: number;
+  /** Премия в процентах к окладу — для прогноза месяцев без вписанной суммы. */
+  bonusPercent: number;
+  /** Праздники и переработка оплачиваются с учётом премии. */
+  bonusInExtras: boolean;
   /** Язык интерфейса: системный, русский или английский. */
   language: LanguageSetting;
 }
@@ -59,6 +63,8 @@ export const DEFAULT_SETTINGS: Settings = {
   weeklyHours: 40,
   monthlySalary: 0,
   ndflPercent: 13,
+  bonusPercent: 0,
+  bonusInExtras: true,
   language: 'system',
 };
 
@@ -83,6 +89,8 @@ export const SETTINGS_KEYS: Record<keyof Settings, string> = {
   weeklyHours: 'ru_weekly_hours',
   monthlySalary: 'ru_monthly_salary',
   ndflPercent: 'ru_ndfl_percent',
+  bonusPercent: 'ru_bonus_percent',
+  bonusInExtras: 'ru_bonus_in_extras',
   language: 'app_language',
 };
 
@@ -128,6 +136,9 @@ function parseSettings(raw: Map<string, string | null>): Settings {
   if (salary) s.monthlySalary = parseNumber(salary, 0, 1e9, 0);
   const ndfl = get('ndflPercent');
   if (ndfl) s.ndflPercent = parseNumber(ndfl, 0, 50, 13);
+  const bonus = get('bonusPercent');
+  if (bonus) s.bonusPercent = parseNumber(bonus, 0, 1000, 0);
+  s.bonusInExtras = get('bonusInExtras') !== 'false';
   const lang = get('language');
   if (lang === 'ru' || lang === 'en' || lang === 'system') s.language = lang;
   return s;

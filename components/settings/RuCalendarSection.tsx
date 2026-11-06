@@ -26,6 +26,10 @@ interface Props {
   setMonthlySalary: (v: number) => void;
   ndflPercent: number;
   setNdflPercent: (v: number) => void;
+  bonusPercent: number;
+  setBonusPercent: (v: number) => void;
+  bonusInExtras: boolean;
+  setBonusInExtras: (v: boolean) => void;
 }
 
 /** Производственный календарь РФ, норма часов и параметры расчёта зарплаты. */
@@ -92,6 +96,23 @@ export function RuCalendarSection(props: Props) {
               subtitle="До вычета НДФЛ. Ставка = оклад ÷ норма месяца. Пусто — берётся часовая ставка из раздела «Оплата»"
               colors={colors}
               right={<NumberField value={props.monthlySalary} onCommit={props.setMonthlySalary} colors={colors} prefix={currency.symbol} suffix="" max={1e8} label="Оклад в месяц" />}
+            />
+            <SettingsRow
+              icon="gift-outline"
+              iconColor={colors.success}
+              title="Премия, % от оклада"
+              subtitle="Для прогноза месяцев, где сумма не вписана. Где вписана — премия считается сама"
+              colors={colors}
+              right={<NumberField value={props.bonusPercent} onCommit={props.setBonusPercent} colors={colors} suffix="%" max={1000} label="Премия, процентов от оклада" />}
+            />
+            <SettingsRow
+              icon="calendar-star"
+              iconColor={colors.danger}
+              title="Премия в оплате праздников и переработки"
+              subtitle="Включено — праздники и сверхурочные считаются от оклада с премией (Постановление КС РФ № 35-П от 27.06.2023). Выключено — только от оклада"
+              switchValue={props.bonusInExtras}
+              onSwitch={props.setBonusInExtras}
+              colors={colors}
             />
             <SettingsRow
               icon="percent-outline"

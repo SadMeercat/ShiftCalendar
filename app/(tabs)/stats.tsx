@@ -65,7 +65,7 @@ function Row({ label, value, colors, strong, swatch, note }: { label: string; va
 }
 
 export default function StatsScreen() {
-  const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart, ruCalendar, weeklyHours, monthlySalary, ndflPercent } = useAppSettings();
+  const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart, ruCalendar, weeklyHours, monthlySalary, ndflPercent, bonusPercent, bonusInExtras, updateSetting } = useAppSettings();
   const { received, setMonthReceived } = useReceivedPay();
   const ruVersion = useRuCalendarVersion();
   const {
@@ -94,7 +94,7 @@ export default function StatsScreen() {
     [period, year, shiftData, overtimeData, leaveData, allShifts, leaveTypes, paidLeaveHours]
   );
   const ruPaySettings: RuPaySettings = {
-    weeklyHours, monthlySalary, hourlyRate: baseRate, ndflPercent, overtimeFirstRate: 1.5, overtimeNextRate: 2, holidayRate: 2,
+    weeklyHours, monthlySalary, hourlyRate: baseRate, ndflPercent, bonusPercent, bonusInExtras, overtimeFirstRate: 1.5, overtimeNextRate: 2, holidayRate: 2,
   };
   const monthKey = (m: number) => `${year}-${String(m + 1).padStart(2, '0')}`;
   const ru = useMemo(() => {
@@ -113,7 +113,7 @@ export default function StatsScreen() {
       fromReceived: period === 'month' ? perMonth[0].fromReceived : null,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruCalendar, ruVersion, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, received]);
+  }, [ruCalendar, ruVersion, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, bonusPercent, bonusInExtras, received]);
   const leaveUsed = useMemo(() => leaveUsedInYear(leaveData, year), [leaveData, year]);
 
   const hasRates = baseRate > 0 || overtimeRate > 0;
@@ -309,6 +309,8 @@ export default function StatsScreen() {
                 fromReceived={ru.fromReceived}
                 received={ru.received}
                 onReceivedChange={period === 'month' ? (v) => setMonthReceived(monthKey(month.getMonth()), v) : undefined}
+                bonusPercent={bonusPercent}
+                onRememberBonus={(v) => updateSetting('bonusPercent', v)}
               />
             )}
 

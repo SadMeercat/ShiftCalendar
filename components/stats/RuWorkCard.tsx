@@ -4,7 +4,7 @@ import { ThemeColors } from '../../constants/colors';
 import { formatMoney, getCurrency } from '../../constants/currencies';
 import { RuPayBreakdown, RuWorkStats } from '../../utils/ruWorkTime';
 import { formatHoursRu } from '../../utils/ruFormat';
-import { Card, Divider, SectionLabel } from '../ui/primitives';
+import { Button, Card, Divider, SectionLabel } from '../ui/primitives';
 import { NumberField } from '../settings/PayEarningsSection';
 
 function Row({ label, value, note, colors, strong, accent }: { label: string; value: string; note?: string; colors: ThemeColors; strong?: boolean; accent?: string }) {
@@ -33,27 +33,59 @@ interface Props {
   received: number;
   /** Задан только для месяца: поле ввода полученной суммы. */
   onReceivedChange?: (amount: number) => void;
+  /** Текущий процент премии для прогноза и сохранение нового. */
+  bonusPercent?: number;
+  onRememberBonus?: (percent: number) => void;
+}
+
+function pct(n: number) {
+  return `${String(Math.round(n * 10) / 10).replace('.', ',')}%`;
 }
 
 function PayRows({ pay, colors, currencyCode, ndflPercent, work }: { pay: RuPayBreakdown; colors: ThemeColors; currencyCode: string; ndflPercent: number; work: RuWorkStats }) {
   const m = (n: number) => formatMoney(n, currencyCode);
+  const hasBase = pay.rateSource === 'salary' || pay.rateSource === 'hourly';
+  const withBonus = pay.extrasRate !== pay.rate;
+  const extrasNote = withBonus ? ` по ставке с премией ${m(pay.extrasRate)}\u2060/ч` : "";
   return (
     <>
-      <Row label="Ставка в час" value={m(pay.rate)} colors={colors} note={pay.rateSource === 'salary' ? 'Оклад ÷ норма месяца' : pay.rateSource === 'received' ? 'Вычислена из полученной суммы' : 'Из настроек'} />
+      <Row
+        label={hasBase ? 'Ставка по окладу' : 'Ставка в час'}
+        value={m(pay.rate)}
+        colors={colors}
+        note={pay.rateSource === 'salary' ? 'Оклад ÷ норма месяца' : pay.rateSource === 'received' ? 'Вычислена из полученной суммы' : 'Часовая ставка из настроек'}
+      />
       <Divider colors={colors} />
-      <Row label="Обычные часы" note={formatHoursRu(work.regularHours)} value={m(pay.regularPay)} colors={colors} />
+      <Row
+        label={hasBase ? 'Оклад за отработанное' : 'Обычные часы'}
+        note={work.shortfallHours > 0 ? `${formatHoursRu(work.regularHours)} из нормы ${formatHoursRu(work.personalNormHours)}` : formatHoursRu(work.regularHours)}
+        value={m(pay.regularPay)}
+        colors={colors}
+      />
       {pay.paidLeavePay > 0 && (
         <>
           <Divider colors={colors} />
           <Row label="Оплачиваемый отпуск" note={`${formatHoursRu(work.paidLeaveNormHours)} по норме`} value={m(pay.paidLeavePay)} colors={colors} />
         </>
       )}
+      {hasBase && (
+        <>
+          <Divider colors={colors} />
+          <Row
+            label={`Премия · ${pct(pay.bonusPercent)}`}
+            note={pay.bonusPay < 0 ? 'Получено меньше, чем положено по окладу' : 'От оклада за отработанное время'}
+            value={m(pay.bonusPay)}
+            colors={colors}
+            accent={pay.bonusPay > 0 ? colors.success : pay.bonusPay < 0 ? colors.danger : undefined}
+          />
+        </>
+      )}
       <Divider colors={colors} />
-      <Row label="Работа в праздники" note={`${formatHoursRu(work.holidayHours)} × 2`} value={m(pay.holidayPay)} colors={colors} accent={pay.holidayPay > 0 ? colors.danger : undefined} />
+      <Row label="Работа в праздники" note={`${formatHoursRu(work.holidayHours)} × 2${extrasNote}`} value={m(pay.holidayPay)} colors={colors} accent={pay.holidayPay > 0 ? colors.danger : undefined} />
       <Divider colors={colors} />
       <Row
         label="Переработка"
-        note={work.overtimeHours > 0 ? `${formatHoursRu(Math.min(work.overtimeHours, 2))} × 1,5${work.overtimeHours > 2 ? ` + ${formatHoursRu(work.overtimeHours - 2)} × 2` : ''}` : 'Нет'}
+        note={work.overtimeHours > 0 ? `${formatHoursRu(Math.min(work.overtimeHours, 2))} × 1,5${work.overtimeHours > 2 ? ` + ${formatHoursRu(work.overtimeHours - 2)} × 2` : ''}${extrasNote}` : 'Нет'}
         value={m(pay.overtimePay)}
         colors={colors}
         accent={pay.overtimePay > 0 ? colors.overtimeAccent : undefined}
@@ -121,7 +153,7 @@ export function RuWorkCard(props: Props) {
           <View style={styles.row}>
             <View style={styles.flex}>
               <Text style={[styles.label, styles.strong, { color: colors.text }]}>Получено на руки</Text>
-              <Text style={[styles.note, { color: colors.textMuted }]}>Впишите сумму — посчитаем ставку и доплаты</Text>
+              <Text style={[styles.note, { color: colors.textMuted }]}>Впишите сумму — разложим её на оклад, премию и доплаты</Text>
             </View>
             <NumberField value={received} onCommit={props.onReceivedChange} colors={colors} prefix={currency.symbol} suffix="" max={1e8} label="Получено за месяц" />
           </View>
@@ -134,13 +166,23 @@ export function RuWorkCard(props: Props) {
             <Divider colors={colors} />
             <Text style={[styles.subhead, { color: colors.textMuted }]}>РАСЧЁТ ИЗ ПОЛУЧЕННОЙ СУММЫ</Text>
             <PayRows pay={fromReceived} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} />
+            {props.onRememberBonus && fromReceived.rateSource !== 'received' && fromReceived.bonusPercent > 0 && fromReceived.bonusPercent !== props.bonusPercent && (
+              <Button
+                label={`Запомнить премию ${pct(fromReceived.bonusPercent)} для прогноза`}
+                icon="content-save-outline"
+                variant="secondary"
+                onPress={() => props.onRememberBonus!(fromReceived.bonusPercent)}
+                colors={colors}
+                style={styles.remember}
+              />
+            )}
           </>
         )}
 
         {estimate && (
           <>
             <Divider colors={colors} />
-            <Text style={[styles.subhead, { color: colors.textMuted }]}>ПО ОКЛАДУ / СТАВКЕ ИЗ НАСТРОЕК</Text>
+            <Text style={[styles.subhead, { color: colors.textMuted }]}>ПРОГНОЗ ПО ОКЛАДУ И ПРЕМИИ ИЗ НАСТРОЕК</Text>
             <PayRows pay={estimate} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} />
             {received > 0 && props.onReceivedChange && (
               <>
@@ -177,4 +219,5 @@ const styles = StyleSheet.create({
   valueStrong: { fontSize: 17, fontWeight: '800' },
   subhead: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginTop: 12, marginBottom: 2 },
   hint: { fontSize: 13, lineHeight: 18, paddingVertical: 10 },
+  remember: { marginTop: 8, marginBottom: 4 },
 });

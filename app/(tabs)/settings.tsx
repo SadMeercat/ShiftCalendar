@@ -325,6 +325,10 @@ export default function SettingsScreen() {
           setMonthlySalary={(v) => updateSetting('monthlySalary', v)}
           ndflPercent={settings.ndflPercent}
           setNdflPercent={(v) => updateSetting('ndflPercent', v)}
+          bonusPercent={settings.bonusPercent}
+          setBonusPercent={(v) => updateSetting('bonusPercent', v)}
+          bonusInExtras={settings.bonusInExtras}
+          setBonusInExtras={(v) => updateSetting('bonusInExtras', v)}
         />
 
         <LeaveBalanceSection
