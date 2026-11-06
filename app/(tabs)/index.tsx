@@ -31,6 +31,8 @@ import { CalendarMode, ModeBar, ToolRow } from '../../components/calendar/ToolRo
 import { Brush, PaintPalette } from '../../components/calendar/PaintPalette';
 import { MonthPickerModal } from '../../components/calendar/MonthPickerModal';
 import { MonthSummary } from '../../components/calendar/MonthSummary';
+import { RuMonthStrip } from '../../components/calendar/RuMonthStrip';
+import { computeRuWork } from '../../utils/ruWorkTime';
 import { CalendarSwitcher } from '../../components/CalendarSwitcher';
 import { DaySheet } from '../../components/DaySheet';
 import { QUICK_FILL_COLLAPSED, RepeatSheet } from '../../components/RepeatSheet';
@@ -53,7 +55,7 @@ function weekTitle(index: number, weekStart: WeekStart) {
 }
 
 export default function CalendarScreen() {
-  const { colors, isDark, weekStart, timeFormat, showShiftTimes, baseRate, overtimeRate, paidLeaveHours } = useAppSettings();
+  const { colors, isDark, weekStart, timeFormat, showShiftTimes, baseRate, overtimeRate, paidLeaveHours, ruCalendar, weeklyHours } = useAppSettings();
   const {
     shiftData, leaveData, notesData, overtimeData, swapsData, allShifts, leaveTypes, getShiftByCode, getLeaveType,
     lastUsedShift, calendars, activeCalendarId, switchCalendar, setShift, clearShift, setLeave, clearLeave, clearDay,
@@ -348,6 +350,15 @@ export default function CalendarScreen() {
     });
   }, [twoPane, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, baseRate, overtimeRate, paidLeaveHours]);
 
+  const ruWork = useMemo(() => {
+    if (!ruCalendar) return null;
+    const m = monthFromIndex(monthIdx);
+    return computeRuWork({
+      shifts: shiftData, overtime: overtimeData, leave: leaveData, allShifts, leaveTypes, weeklyHours,
+      ...monthRange(m.getFullYear(), m.getMonth()),
+    });
+  }, [ruCalendar, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours]);
+
   const viewedMonth = monthFromIndex(monthIdx);
   const header =
     view === 'month' ? { title: format(viewedMonth, 'MMMM'), year: format(viewedMonth, 'yyyy') } : weekTitle(weekIdx, weekStart);
@@ -384,6 +395,7 @@ export default function CalendarScreen() {
         preview={livePreview}
         showTime={showShiftTimes}
         timeFormat={timeFormat}
+        ruCalendar={ruCalendar}
         colors={colors}
         isDark={isDark}
         onDayPress={onDayPress}
@@ -481,6 +493,11 @@ export default function CalendarScreen() {
 
   const calendarBody = (
     <View style={styles.flex}>
+      {view === 'month' && ruWork && (
+        <View style={{ paddingHorizontal: GRID_PADDING }}>
+          <RuMonthStrip work={ruWork} colors={colors} />
+        </View>
+      )}
       {view === 'month' && (
         <View style={[styles.weekdays, { paddingHorizontal: GRID_PADDING }]}>
           {gridW > 0 && (
@@ -489,6 +506,7 @@ export default function CalendarScreen() {
               colors={colors}
               width={gridW}
               todayWeekday={monthIdx === todayMonthIdx ? todayDate.getDay() : null}
+              ruCalendar={ruCalendar}
             />
           )}
         </View>

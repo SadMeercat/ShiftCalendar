@@ -283,7 +283,7 @@ export async function exportPDF(opts: ExportOptions): Promise<boolean> {
 
 const DATA_KEY_PREFIXES = ['shift_data_', 'shift_notes_', 'shift_overtime_', 'shift_swaps_', 'leave_data_', 'leave_balances_'];
 const EXACT_KEYS = new Set([
-  'calendars_list', 'active_calendar', 'all_shifts_v2', 'custom_shifts', 'schema_version', 'last_used_shift',
+  'calendars_list', 'active_calendar', 'all_shifts_v2', 'custom_shifts', 'schema_version', 'last_used_shift', 'ru_received_pay',
   ...Object.values(SETTINGS_KEYS),
 ]);
 

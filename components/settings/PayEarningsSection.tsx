@@ -18,7 +18,7 @@ interface Props {
 }
 
 /** Number field that keeps the user's text while typing and saves every valid value. */
-function NumberField({
+export function NumberField({
   value,
   onCommit,
   colors,

@@ -21,6 +21,9 @@ import { YearlyOverview } from '../../components/YearlyOverview';
 import { DistributionBar, Segment } from '../../components/stats/DistributionBar';
 import { MonthlyHoursChart } from '../../components/stats/MonthlyHoursChart';
 import { LeaveMeters } from '../../components/stats/LeaveMeters';
+import { RuWorkCard } from '../../components/stats/RuWorkCard';
+import { useReceivedPay } from '../../hooks/useReceivedPay';
+import { RuPaySettings, computeRuWork, estimateRuPay, payFromReceived, sumRuPay, sumRuWork } from '../../utils/ruWorkTime';
 import { Card, Divider, EmptyState, Button, Segmented, SectionLabel } from '../../components/ui/primitives';
 import { Tap } from '../../components/ui/Tap';
 
@@ -61,7 +64,8 @@ function Row({ label, value, colors, strong, swatch, note }: { label: string; va
 }
 
 export default function StatsScreen() {
-  const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart } = useAppSettings();
+  const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart, ruCalendar, weeklyHours, monthlySalary, ndflPercent } = useAppSettings();
+  const { received, setMonthReceived } = useReceivedPay();
   const {
     shiftData, overtimeData, leaveData, notesData, leaveBalances, allShifts, leaveTypes, calendars, activeCalendarId, switchCalendar,
   } = useShifts();
@@ -87,6 +91,27 @@ export default function StatsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [period, year, shiftData, overtimeData, leaveData, allShifts, leaveTypes, paidLeaveHours]
   );
+  const ruPaySettings: RuPaySettings = {
+    weeklyHours, monthlySalary, hourlyRate: baseRate, ndflPercent, overtimeFirstRate: 1.5, overtimeNextRate: 2, holidayRate: 2,
+  };
+  const monthKey = (m: number) => `${year}-${String(m + 1).padStart(2, '0')}`;
+  const ru = useMemo(() => {
+    if (!ruCalendar) return null;
+    const months = period === 'month' ? [month.getMonth()] : Array.from({ length: 12 }, (_, m) => m);
+    const perMonth = months.map((m) => {
+      const work = computeRuWork({ shifts: shiftData, overtime: overtimeData, leave: leaveData, allShifts, leaveTypes, weeklyHours, ...monthRange(year, m) });
+      const got = received[monthKey(m)] ?? 0;
+      return { work, got, estimate: estimateRuPay(work, ruPaySettings), fromReceived: payFromReceived(got, work, ruPaySettings) };
+    });
+    const hasRate = monthlySalary > 0 || baseRate > 0;
+    return {
+      work: sumRuWork(perMonth.map((p) => p.work)),
+      received: perMonth.reduce((a, p) => a + p.got, 0),
+      estimate: hasRate ? sumRuPay(perMonth.map((p) => p.estimate)) : null,
+      fromReceived: period === 'month' ? perMonth[0].fromReceived : null,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ruCalendar, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, received]);
   const leaveUsed = useMemo(() => leaveUsedInYear(leaveData, year), [leaveData, year]);
 
   const hasRates = baseRate > 0 || overtimeRate > 0;
@@ -269,6 +294,21 @@ export default function StatsScreen() {
                 )}
               </View>
             </View>
+
+            {ru && (
+              <RuWorkCard
+                title={period === 'month' ? periodTitle : `${year} год`}
+                work={ru.work}
+                weeklyHours={weeklyHours}
+                colors={colors}
+                currencyCode={currencyCode}
+                ndflPercent={ndflPercent}
+                estimate={ru.estimate}
+                fromReceived={ru.fromReceived}
+                received={ru.received}
+                onReceivedChange={period === 'month' ? (v) => setMonthReceived(monthKey(month.getMonth()), v) : undefined}
+              />
+            )}
 
             <SectionLabel colors={colors}>By shift</SectionLabel>
             <Card colors={colors}>

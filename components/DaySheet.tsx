@@ -11,6 +11,7 @@ import { ShiftType, getShiftHours, isWorkingShift } from '../constants/shifts';
 import { ThemeColors } from '../constants/colors';
 import { Radius } from '../constants/theme';
 import { fromDateKey, todayKey } from '../utils/dates';
+import { getRuDayInfo } from '../utils/ruCalendar';
 import { formatHours, formatTimeRange } from '../utils/time';
 import { readableTextColor, withAlpha } from '../utils/color';
 import { haptic } from '../utils/haptics';
@@ -71,7 +72,8 @@ function ShiftOption({
 }
 
 function DayContent({ dateKey, onToast, onClose }: { dateKey: string; onToast: Props['onToast']; onClose: () => void }) {
-  const { colors, timeFormat } = useAppSettings();
+  const { colors, timeFormat, ruCalendar, weeklyHours } = useAppSettings();
+  const ruDay = ruCalendar ? getRuDayInfo(dateKey) : undefined;
   const {
     shiftData, leaveData, notesData, overtimeData, swapsData, allShifts, leaveTypes, getShiftByCode, getLeaveType,
     setShift, clearShift, setLeave, clearLeave, clearDay, restoreAssignments, setNote, setOvertime, offerSwap, cancelSwap,
@@ -221,6 +223,19 @@ function DayContent({ dateKey, onToast, onClose }: { dateKey: string; onToast: P
             )}
           </View>
           <Text style={[styles.dateTitle, { color: colors.text }]}>{format(date, 'd MMMM yyyy')}</Text>
+          {ruDay && (ruDay.off || ruDay.shortened || ruDay.workingWeekend) ? (
+            <Text style={[styles.ruDay, { color: ruDay.off ? colors.danger : colors.warning }]}>
+              {ruDay.holiday
+                ? `Праздник · ${ruDay.holidayName} · работа оплачивается ×2`
+                : ruDay.kind === 'transfer'
+                  ? 'Перенесённый выходной'
+                  : ruDay.off
+                    ? 'Выходной'
+                    : ruDay.shortened
+                      ? `Предпраздничный день · норма ${weeklyHours / 5 - 1} ч`
+                      : 'Рабочая суббота по переносу'}
+            </Text>
+          ) : null}
         </View>
         <Tap onPress={onClose} accessibilityLabel="Close" style={[styles.closeBtn, { backgroundColor: colors.surfaceVariant }]}>
           <MaterialCommunityIcons name="close" size={20} color={colors.text} />
@@ -477,6 +492,7 @@ const styles = StyleSheet.create({
   todayBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   todayBadgeText: { fontSize: 11, fontWeight: '800' },
   dateTitle: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginTop: 2 },
+  ruDay: { fontSize: 13, fontWeight: '700', marginTop: 4 },
   closeBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   statusCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: Radius.lg, borderWidth: 1 },
   statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

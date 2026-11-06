@@ -51,9 +51,10 @@ export const CURRENCIES: Currency[] = [
   { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
   { code: 'DKK', symbol: 'kr', name: 'Danish Krone' },
   { code: 'PLN', symbol: 'zł', name: 'Polish Zloty' },
+  { code: 'RUB', symbol: '₽', name: 'Российский рубль' },
 ];
 
-export const DEFAULT_CURRENCY = 'USD';
+export const DEFAULT_CURRENCY = 'RUB';
 
 export function getCurrency(code: string): Currency {
   return CURRENCIES.find((c) => c.code === code) ?? CURRENCIES[0];
@@ -69,6 +70,11 @@ export function formatMoney(amount: number, code: string): string {
   const decimals = currency.decimals ?? 2;
   const fixed = Math.abs(amount).toFixed(decimals);
   const [int, frac] = fixed.split('.');
+  if (code === 'RUB') {
+    // Русская запись: 150 000,50 ₽
+    const ru = int.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+    return `${amount < 0 ? '−' : ''}${ru},${frac}\u00A0₽`;
+  }
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const number = frac ? `${grouped}.${frac}` : grouped;
   const sign = amount < 0 ? '-' : '';

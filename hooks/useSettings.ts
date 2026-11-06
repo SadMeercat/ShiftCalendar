@@ -27,6 +27,13 @@ export interface Settings {
   hapticsEnabled: boolean;
   showShiftTimes: boolean;
   onboardingComplete: boolean;
+  /** Производственный календарь РФ: выходные, праздники, норма часов. */
+  ruCalendar: boolean;
+  /** Продолжительность рабочей недели для нормы: 40, 36 или 24 часа. */
+  weeklyHours: number;
+  /** Оклад в месяц до вычета НДФЛ (0 — считать по часовой ставке). */
+  monthlySalary: number;
+  ndflPercent: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -45,6 +52,10 @@ export const DEFAULT_SETTINGS: Settings = {
   hapticsEnabled: true,
   showShiftTimes: true,
   onboardingComplete: false,
+  ruCalendar: true,
+  weeklyHours: 40,
+  monthlySalary: 0,
+  ndflPercent: 13,
 };
 
 /** Storage keys (the older ones are unchanged so existing preferences carry over). */
@@ -64,6 +75,10 @@ export const SETTINGS_KEYS: Record<keyof Settings, string> = {
   hapticsEnabled: 'haptics_enabled',
   showShiftTimes: 'show_shift_times',
   onboardingComplete: 'onboarding_complete',
+  ruCalendar: 'ru_calendar',
+  weeklyHours: 'ru_weekly_hours',
+  monthlySalary: 'ru_monthly_salary',
+  ndflPercent: 'ru_ndfl_percent',
 };
 
 function parseNumber(raw: string, min: number, max: number, fallback: number) {
@@ -101,6 +116,13 @@ function parseSettings(raw: Map<string, string | null>): Settings {
   s.showShiftTimes = get('showShiftTimes') !== 'false';
   // Any stored value (older versions wrote 'true') means onboarding was seen.
   s.onboardingComplete = get('onboardingComplete') !== null;
+  s.ruCalendar = get('ruCalendar') !== 'false';
+  const weekly = get('weeklyHours');
+  if (weekly) s.weeklyHours = parseNumber(weekly, 1, 60, 40);
+  const salary = get('monthlySalary');
+  if (salary) s.monthlySalary = parseNumber(salary, 0, 1e9, 0);
+  const ndfl = get('ndflPercent');
+  if (ndfl) s.ndflPercent = parseNumber(ndfl, 0, 50, 13);
   return s;
 }
 

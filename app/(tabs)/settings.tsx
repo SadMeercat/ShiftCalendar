@@ -30,6 +30,7 @@ import { CalendarEditor } from '../../components/settings/CalendarEditor';
 import { CurrencySheet } from '../../components/settings/CurrencySheet';
 import { NotificationsSection } from '../../components/settings/NotificationsSection';
 import { PayEarningsSection } from '../../components/settings/PayEarningsSection';
+import { RuCalendarSection } from '../../components/settings/RuCalendarSection';
 import { LeaveBalanceSection } from '../../components/settings/LeaveBalanceSection';
 import { AppearanceSection } from '../../components/settings/AppearanceSection';
 import { DataSection } from '../../components/settings/DataSection';
@@ -310,6 +311,19 @@ export default function SettingsScreen() {
           setOvertimeRate={(v) => updateSetting('overtimeRate', v)}
           paidLeaveHours={settings.paidLeaveHours}
           setPaidLeaveHours={(v) => updateSetting('paidLeaveHours', v)}
+        />
+
+        <RuCalendarSection
+          colors={colors}
+          currencyCode={settings.currencyCode}
+          ruCalendar={settings.ruCalendar}
+          setRuCalendar={(v) => updateSetting('ruCalendar', v)}
+          weeklyHours={settings.weeklyHours}
+          setWeeklyHours={(v) => updateSetting('weeklyHours', v)}
+          monthlySalary={settings.monthlySalary}
+          setMonthlySalary={(v) => updateSetting('monthlySalary', v)}
+          ndflPercent={settings.ndflPercent}
+          setNdflPercent={(v) => updateSetting('ndflPercent', v)}
         />
 
         <LeaveBalanceSection

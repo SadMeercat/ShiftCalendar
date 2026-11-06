@@ -6,6 +6,7 @@ import { ThemeColors } from '../../constants/colors';
 import { WeekStart, buildMonthGrid, monthFromIndex, weekdayOrder } from '../../utils/dates';
 import { TimeFormat } from '../../utils/time';
 import { DayCell, RangeState } from './DayCell';
+import { getRuDayInfo } from '../../utils/ruCalendar';
 
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -30,6 +31,8 @@ export interface MonthGridProps {
   preview: Map<string, ShiftType | null> | null;
   showTime: boolean;
   timeFormat: TimeFormat;
+  /** Показывать выходные и праздники по производственному календарю РФ. */
+  ruCalendar?: boolean;
   colors: ThemeColors;
   isDark: boolean;
   onDayPress: (key: string) => void;
@@ -77,6 +80,7 @@ function MonthGridBase(props: MonthGridProps) {
                 preview={preview}
                 showTime={props.showTime}
                 timeFormat={props.timeFormat}
+                ruDay={props.ruCalendar ? getRuDayInfo(d.key) : undefined}
                 colors={props.colors}
                 isDark={props.isDark}
                 accessibilityPrefix={`${WEEKDAY_LONG[d.weekday]} ${d.day} ${MONTHS[Number(date[1]) - 1]}`}
@@ -98,11 +102,13 @@ export function WeekdayHeader({
   colors,
   width,
   todayWeekday,
+  ruCalendar,
 }: {
   weekStart: WeekStart;
   colors: ThemeColors;
   width: number;
   todayWeekday: number | null;
+  ruCalendar?: boolean;
 }) {
   return (
     <View style={[styles.row, { width }]} importantForAccessibility="no-hide-descendants">
@@ -114,7 +120,7 @@ export function WeekdayHeader({
             key={wd}
             style={[
               styles.weekday,
-              { width: width / 7, color: today ? colors.primaryText : weekend ? colors.textMuted : colors.textSecondary },
+              { width: width / 7, color: today ? colors.primaryText : weekend ? (ruCalendar ? colors.danger : colors.textMuted) : colors.textSecondary },
               today && styles.weekdayToday,
             ]}
           >

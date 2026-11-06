@@ -6,6 +6,7 @@ import { LeaveType } from '../../constants/leaveTypes';
 import { ThemeColors } from '../../constants/colors';
 import { readableTextColor, withAlpha } from '../../utils/color';
 import { TimeFormat, formatTimeCompact } from '../../utils/time';
+import { RuDayInfo } from '../../utils/ruCalendar';
 
 export type RangeState = 0 | 1 | 2; // none, inside range, range edge
 
@@ -27,6 +28,8 @@ export interface DayCellProps {
   preview?: ShiftType | null;
   showTime: boolean;
   timeFormat: TimeFormat;
+  /** День по производственному календарю РФ (если включён). */
+  ruDay?: RuDayInfo;
   colors: ThemeColors;
   isDark: boolean;
   accessibilityPrefix: string;
@@ -37,7 +40,7 @@ export interface DayCellProps {
 function DayCellBase(props: DayCellProps) {
   const {
     dateKey, day, inMonth, width, height, shift, leave, hasNote, overtime, hasSwap,
-    isToday, isSelected, range, preview, showTime, timeFormat, colors, isDark, onPress, onLongPress,
+    isToday, isSelected, range, preview, showTime, timeFormat, ruDay, colors, isDark, onPress, onLongPress,
   } = props;
 
   const item = leave ?? shift;
@@ -81,6 +84,8 @@ function DayCellBase(props: DayCellProps) {
   const label = [
     props.accessibilityPrefix,
     item ? (leave ? leave.label : `${shift!.label} shift`) : 'no shift',
+    ruDay?.holiday ? `праздник: ${ruDay.holidayName}` : ruDay?.off ? 'выходной' : '',
+    ruDay?.shortened ? 'сокращённый день' : '',
     isToday ? 'today' : '',
     hasNote ? 'has note' : '',
     overtime > 0 ? `${overtime} hours overtime` : '',
@@ -109,12 +114,20 @@ function DayCellBase(props: DayCellProps) {
           },
         ]}
       >
-        <View style={[styles.dayWrap, xl && styles.dayWrapXL, isToday && { backgroundColor: colors.primary }]}>
+        <View
+          style={[
+            styles.dayWrap,
+            xl && styles.dayWrapXL,
+            ruDay?.holiday && inMonth && { backgroundColor: withAlpha(colors.danger, isDark ? 0.28 : 0.16) },
+            isToday && { backgroundColor: colors.primary },
+          ]}
+        >
           <Text
             style={[
               styles.dayText,
               xl && styles.dayTextXL,
-              { color: isToday ? colors.onPrimary : inMonth ? colors.text : colors.textSecondary },
+              { color: isToday ? colors.onPrimary : ruDay?.off ? colors.danger : inMonth ? colors.text : colors.textSecondary },
+              ruDay?.holiday && styles.dayTextToday,
               isToday && styles.dayTextToday,
             ]}
           >
@@ -168,6 +181,12 @@ function DayCellBase(props: DayCellProps) {
             </Text>
           ) : null}
         </View>
+
+        {ruDay?.shortened && inMonth && (
+          <Text style={[styles.shortMark, { color: colors.warning }]} accessible={false}>
+            −1ч
+          </Text>
+        )}
 
         {hasDots && (
           <View style={[styles.dots, innerW >= 70 && styles.dotsRow]}>
@@ -232,4 +251,5 @@ const styles = StyleSheet.create({
   },
   dotsRow: { flexDirection: 'row', top: 8, right: 8, gap: 3 },
   dot: { width: 5, height: 5, borderRadius: 2.5 },
+  shortMark: { position: 'absolute', top: 5, left: 5, fontSize: 8, fontWeight: '800' },
 });
