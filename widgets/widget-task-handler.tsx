@@ -1,10 +1,11 @@
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_SHIFTS, ShiftType } from '../constants/shifts';
-import { DEFAULT_LEAVE_TYPES } from '../constants/leaveTypes';
+import { localizedLeaveTypes } from '../constants/leaveTypes';
 import { WeekStart } from '../utils/dates';
 import { buildWidgetModel } from './widgetModel';
 import { renderShiftWidget } from './ShiftWeekWidget';
+import { localizeDefault, setLanguage } from '../utils/i18n';
 
 function parse<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
@@ -19,8 +20,10 @@ function parse<T>(raw: string | null | undefined, fallback: T): T {
 /** Reads what the widget needs straight from storage (runs headless, without the app UI). */
 async function loadWidget() {
   const pairs = new Map(
-    await AsyncStorage.multiGet(['week_start', 'time_format', 'theme_mode', 'primary_calendar', 'all_shifts_v2', 'calendars_list'])
+    await AsyncStorage.multiGet(['week_start', 'time_format', 'theme_mode', 'primary_calendar', 'all_shifts_v2', 'calendars_list', 'app_language'])
   );
+  const lang = pairs.get('app_language');
+  setLanguage(lang === 'ru' || lang === 'en' ? lang : 'system');
   const calendars = parse<{ id: string; name: string }[]>(pairs.get('calendars_list'), []);
   const wanted = pairs.get('primary_calendar') || 'default';
   const calendar = calendars.find((c) => c.id === wanted) ?? calendars.find((c) => c.id === 'default');
@@ -32,10 +35,10 @@ async function loadWidget() {
     shifts: parse<Record<string, string>>(data.get(`shift_data_${calId}`), {}),
     leave: parse<Record<string, string>>(data.get(`leave_data_${calId}`), {}),
     allShifts: parse<ShiftType[]>(pairs.get('all_shifts_v2'), DEFAULT_SHIFTS),
-    leaveTypes: DEFAULT_LEAVE_TYPES,
+    leaveTypes: localizedLeaveTypes(),
     weekStart: (week === '1' || week === '6' ? Number(week) : 0) as WeekStart,
     timeFormat: pairs.get('time_format') === '12h' ? '12h' : '24h',
-    calendarName: calendar?.name ?? 'My Shifts',
+    calendarName: localizeDefault(calendar?.name ?? 'My Shifts', 'My Shifts'),
   });
   return renderShiftWidget(model, pairs.get('theme_mode') || 'system');
 }

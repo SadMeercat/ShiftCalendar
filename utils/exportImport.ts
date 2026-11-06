@@ -10,7 +10,7 @@ import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format } from 'date-fns';
+import { formatDate as format, monthName, pl, tr } from './i18n';
 import { ShiftType, isWorkingShift } from '../constants/shifts';
 import { LeaveType } from '../constants/leaveTypes';
 import { formatMoney } from '../constants/currencies';
@@ -22,10 +22,6 @@ import { WeekStart, buildMonthGrid, weekdayOrder } from './dates';
 import { computeStats, monthRange } from './statsCalculation';
 import { TimeFormat, formatTimeCompact, formatTimeRange, formatHours } from './time';
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export interface ExportData {
@@ -67,12 +63,12 @@ type Delivery = 'share' | 'save' | 'cancel';
 function askDelivery(fileName: string): Promise<Delivery> {
   return new Promise((resolve) => {
     Alert.alert(
-      'Export ready',
+      tr('Export ready'),
       fileName,
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => resolve('cancel') },
-        { text: 'Share', onPress: () => resolve('share') },
-        { text: 'Save to device', onPress: () => resolve('save') },
+        { text: tr('Cancel'), style: 'cancel', onPress: () => resolve('cancel') },
+        { text: tr('Share'), onPress: () => resolve('share') },
+        { text: tr('Save to device'), onPress: () => resolve('save') },
       ],
       { cancelable: true, onDismiss: () => resolve('cancel') }
     );
@@ -102,7 +98,7 @@ async function deliverFile(file: File, fileName: string, mimeType: string, uti: 
 }
 
 function periodLabel(year: number, month: number | null) {
-  return month !== null ? `${MONTH_NAMES[month]} ${year}` : `${year}`;
+  return month !== null ? `${monthName(month)} ${year}` : `${year}`;
 }
 
 function periodRange(year: number, month: number | null) {
@@ -159,7 +155,7 @@ function monthSection(opts: ExportOptions, month: number, isLast: boolean): stri
   });
 
   const head = weekdayOrder(opts.weekStart)
-    .map((d) => `<th>${DAY_NAMES[d].slice(0, 3)}</th>`)
+    .map((d) => `<th>${tr(DAY_NAMES[d].slice(0, 3))}</th>`)
     .join('');
 
   const notes: string[] = [];
@@ -172,7 +168,7 @@ function monthSection(opts: ExportOptions, month: number, isLast: boolean): stri
         const item = leave ?? shift;
         const ot = data.overtime[day.key];
         const note = data.notes[day.key];
-        if (note) notes.push(`<tr><td class="nd">${MONTH_NAMES[month].slice(0, 3)} ${day.day}</td><td>${escapeHtml(note).replace(/\n/g, '<br>')}</td></tr>`);
+        if (note) notes.push(`<tr><td class="nd">${day.day} ${monthName(month, true, false)}</td><td>${escapeHtml(note).replace(/\n/g, '<br>')}</td></tr>`);
         const bg = item ? withAlpha(item.color, 0.1) : '#F9FAFB';
         const pill = item
           ? `<div class="pill" style="background:${item.color};color:${readableTextColor(item.color)}">${escapeHtml(item.code)}</div>`
@@ -181,7 +177,7 @@ function monthSection(opts: ExportOptions, month: number, isLast: boolean): stri
           ? `<div class="time">${formatTimeCompact(shift.startTime, opts.timeFormat)}–${formatTimeCompact(shift.endTime, opts.timeFormat)}</div>`
           : item ? `<div class="time">${escapeHtml(item.label)}</div>` : '';
         const marks = [
-          ot ? `<span class="ot">+${ot}h</span>` : '',
+          ot ? `<span class="ot">+${formatHours(ot)}</span>` : '',
           note ? '<span class="nt">●</span>' : '',
         ].join(' ');
         return `<td style="background:${bg}"><div class="num">${day.day}</div>${pill}${time}<div class="marks">${marks}</div></td>`;
@@ -191,11 +187,11 @@ function monthSection(opts: ExportOptions, month: number, isLast: boolean): stri
     .join('');
 
   const chips = [
-    ['Worked', `${stats.workingDays} days`],
-    ['Hours', formatHours(stats.totalHours)],
-    stats.overtimeHours > 0 ? ['Overtime', `+${formatHours(stats.overtimeHours)}`] : null,
-    stats.leaveDays > 0 ? ['Leave', `${stats.leaveDays} days`] : null,
-    stats.totalPay > 0 ? ['Est. pay', formatMoney(stats.totalPay, opts.currencyCode)] : null,
+    [tr('Worked'), pl(stats.workingDays, ['day', 'days'], ['день', 'дня', 'дней'])],
+    [tr('Hours'), formatHours(stats.totalHours)],
+    stats.overtimeHours > 0 ? [tr('Overtime'), `+${formatHours(stats.overtimeHours)}`] : null,
+    stats.leaveDays > 0 ? [tr('Leave'), pl(stats.leaveDays, ['day', 'days'], ['день', 'дня', 'дней'])] : null,
+    stats.totalPay > 0 ? [tr('Est. pay'), formatMoney(stats.totalPay, opts.currencyCode)] : null,
   ]
     .filter(Boolean)
     .map((c) => `<div class="chip"><div class="cl">${c![0]}</div><div class="cv">${escapeHtml(c![1])}</div></div>`)
@@ -216,11 +212,11 @@ function monthSection(opts: ExportOptions, month: number, isLast: boolean): stri
 
   return `
   <section class="month${isLast ? '' : ' brk'}">
-    <h2>${MONTH_NAMES[month]} ${year}</h2>
+    <h2>${monthName(month)} ${year}</h2>
     <div class="chips">${chips}</div>
     <table class="grid"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
     ${legend ? `<div class="legend">${legend}</div>` : ''}
-    ${notes.length ? `<h3>Notes</h3><table class="notes"><tbody>${notes.join('')}</tbody></table>` : ''}
+    ${notes.length ? `<h3>${tr('Notes')}</h3><table class="notes"><tbody>${notes.join('')}</tbody></table>` : ''}
   </section>`;
 }
 
@@ -264,7 +260,7 @@ export function buildPDFHtml(opts: ExportOptions): string {
 <body>
   <div class="header">
     <div><h1>${escapeHtml(opts.calendarName)}</h1><p>${periodLabel(opts.year, opts.month)}</p></div>
-    <div class="meta">ShiftCalendar<br>Generated ${format(new Date(), 'MMM d, yyyy')}</div>
+    <div class="meta">ShiftCalendar<br>${tr('Generated')} ${format(new Date(), 'MMM d, yyyy')}</div>
   </div>
   ${sections}
 </body></html>`;
@@ -320,15 +316,15 @@ export function inspectBackup(content: string): BackupSummary {
   try {
     parsed = JSON.parse(content);
   } catch {
-    throw new Error('This file is not a valid backup (it is not JSON).');
+    throw new Error(tr('This file is not a valid backup (it is not JSON).'));
   }
   if (!parsed || typeof parsed.data !== 'object' || parsed.data === null) {
-    throw new Error('This file is not a ShiftCalendar backup.');
+    throw new Error(tr('This file is not a ShiftCalendar backup.'));
   }
   const entries: [string, string][] = Object.entries(parsed.data as Record<string, unknown>)
     .filter(([key, value]) => typeof value === 'string' && isBackupKey(key))
     .map(([key, value]) => [key, value as string]);
-  if (entries.length === 0) throw new Error('The backup does not contain any ShiftCalendar data.');
+  if (entries.length === 0) throw new Error(tr('The backup does not contain any ShiftCalendar data.'));
 
   let calendars = 1;
   let days = 0;
@@ -344,8 +340,8 @@ export function inspectBackup(content: string): BackupSummary {
 }
 
 export function describeBackup(summary: BackupSummary): string {
-  const when = summary.timestamp ? format(new Date(summary.timestamp), 'MMM d, yyyy · HH:mm') : 'an unknown date';
-  return `Backup from ${when}\n${summary.calendars} calendar${summary.calendars === 1 ? '' : 's'}, ${summary.days} scheduled day${summary.days === 1 ? '' : 's'}.\n\nThis replaces all current data and settings.`;
+  const when = summary.timestamp ? format(new Date(summary.timestamp), 'MMM d, yyyy · HH:mm') : tr('an unknown date');
+  return `${tr('Backup from {when}', { when })}\n${pl(summary.calendars, ['calendar', 'calendars'], ['календарь', 'календаря', 'календарей'])}, ${pl(summary.days, ['scheduled day', 'scheduled days'], ['запланированный день', 'запланированных дня', 'запланированных дней'])}.\n\n${tr('This replaces all current data and settings.')}`;
 }
 
 /** Replaces the app's stored data with the backup's. Callers reload state afterwards. */

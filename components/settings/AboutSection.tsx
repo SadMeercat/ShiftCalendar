@@ -7,6 +7,7 @@ import { ThemeColors } from '../../constants/colors';
 import { Tap } from '../ui/Tap';
 import { SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   colors: ThemeColors;
@@ -28,7 +29,7 @@ export function AboutSection({ colors, showPrivacy, setShowPrivacy }: Props) {
   const version = Constants.expoConfig?.version ?? '';
   return (
     <>
-      <SectionLabel colors={colors}>About</SectionLabel>
+      <SectionLabel colors={colors}>{tr('About')}</SectionLabel>
       <SettingsCard colors={colors}>
         <View style={styles.appRow}>
           <View style={[styles.appIcon, { backgroundColor: colors.primary }]}>
@@ -36,41 +37,41 @@ export function AboutSection({ colors, showPrivacy, setShowPrivacy }: Props) {
           </View>
           <View style={styles.flex}>
             <Text style={[styles.appName, { color: colors.text }]}>ShiftCalendar</Text>
-            <Text style={[styles.appMeta, { color: colors.textSecondary }]}>{version ? `Version ${version} · ` : ''}Offline & private</Text>
+            <Text style={[styles.appMeta, { color: colors.textSecondary }]}>{version ? `${tr('Version')} ${version} · ` : ''}{tr('Offline & private')}</Text>
           </View>
         </View>
-        <SettingsRow icon="shield-account" title="Privacy policy" colors={colors} onPress={() => setShowPrivacy(true)} />
+        <SettingsRow icon="shield-account" title={tr('Privacy policy')} colors={colors} onPress={() => setShowPrivacy(true)} />
         <SettingsRow
           icon="coffee"
           iconColor={colors.warning}
-          title="Buy me a coffee"
-          subtitle="Enjoying ShiftCalendar? Support its development"
+          title={tr('Buy me a coffee')}
+          subtitle={tr('Enjoying ShiftCalendar? Support its development')}
           colors={colors}
           onPress={() => Linking.openURL('https://buymeacoffee.com/itroy0').catch(() => {})}
         />
       </SettingsCard>
       <View style={styles.madeBy}>
         <MaterialCommunityIcons name="heart" size={14} color={colors.danger} />
-        <Text style={[styles.madeByText, { color: colors.textMuted }]}>Made by Troy</Text>
+        <Text style={[styles.madeByText, { color: colors.textMuted }]}>{tr('Made by Troy')}</Text>
       </View>
 
       <Modal visible={showPrivacy} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPrivacy(false)}>
         <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Privacy policy</Text>
-            <Tap onPress={() => setShowPrivacy(false)} accessibilityLabel="Close" style={[styles.closeBtn, { backgroundColor: colors.surfaceVariant }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{tr('Privacy policy')}</Text>
+            <Tap onPress={() => setShowPrivacy(false)} accessibilityLabel={tr('Close')} style={[styles.closeBtn, { backgroundColor: colors.surfaceVariant }]}>
               <MaterialCommunityIcons name="close" size={20} color={colors.text} />
             </Tap>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent}>
-            <Text style={[styles.updated, { color: colors.textMuted }]}>Last updated October 2026</Text>
+            <Text style={[styles.updated, { color: colors.textMuted }]}>{tr('Last updated October 2026')}</Text>
             <Text style={[styles.body, { color: colors.text }]}>
-              ShiftCalendar is built to keep your schedule private. Here is how the app handles your information.
+              {tr('ShiftCalendar is built to keep your schedule private. Here is how the app handles your information.')}
             </Text>
             {PRIVACY.map((p) => (
               <View key={p.title}>
-                <Text style={[styles.policyTitle, { color: colors.text }]}>{p.title}</Text>
-                <Text style={[styles.body, { color: colors.textSecondary }]}>{p.body}</Text>
+                <Text style={[styles.policyTitle, { color: colors.text }]}>{tr(p.title)}</Text>
+                <Text style={[styles.body, { color: colors.textSecondary }]}>{tr(p.body)}</Text>
               </View>
             ))}
           </ScrollView>

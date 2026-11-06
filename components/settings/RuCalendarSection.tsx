@@ -89,7 +89,7 @@ export function RuCalendarSection(props: Props) {
               icon="wallet-outline"
               iconColor={colors.success}
               title="Оклад в месяц"
-              subtitle="До вычета НДФЛ. Ставка = оклад ÷ норма месяца. Пусто — берётся «Hourly rate»"
+              subtitle="До вычета НДФЛ. Ставка = оклад ÷ норма месяца. Пусто — берётся часовая ставка из раздела «Оплата»"
               colors={colors}
               right={<NumberField value={props.monthlySalary} onCommit={props.setMonthlySalary} colors={colors} prefix={currency.symbol} suffix="" max={1e8} label="Оклад в месяц" />}
             />

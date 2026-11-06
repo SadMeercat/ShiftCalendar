@@ -8,6 +8,7 @@ import { haptic } from '../../utils/haptics';
 import { Tap } from '../ui/Tap';
 import { SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   colors: ThemeColors;
@@ -22,7 +23,7 @@ interface Props {
 export function CalendarsSection({ colors, calendars, activeCalendarId, primaryCalendarId, onSwitch, onEdit, onNew }: Props) {
   return (
     <>
-      <SectionLabel colors={colors}>Calendars</SectionLabel>
+      <SectionLabel colors={colors}>{tr('Calendars')}</SectionLabel>
       <SettingsCard colors={colors}>
         {calendars.map((cal) => {
           const active = cal.id === activeCalendarId;
@@ -36,7 +37,7 @@ export function CalendarsSection({ colors, calendars, activeCalendarId, primaryC
                 onSwitch(cal.id);
               }}
               activeOpacity={0.6}
-              accessibilityLabel={`${cal.name}${active ? ', currently shown' : '. Tap to show this calendar'}`}
+              accessibilityLabel={`${cal.name}${active ? ', ' + tr('currently shown') : '. ' + tr('Tap to show this calendar')}`}
               style={styles.row}
             >
               <View style={[styles.dot, { backgroundColor: cal.color }]} />
@@ -48,25 +49,25 @@ export function CalendarsSection({ colors, calendars, activeCalendarId, primaryC
                   <View style={styles.badges}>
                     {active && (
                       <View style={[styles.badge, { backgroundColor: withAlpha(colors.primary, 0.14) }]}>
-                        <Text style={[styles.badgeText, { color: colors.primaryText }]}>Showing</Text>
+                        <Text style={[styles.badgeText, { color: colors.primaryText }]}>{tr('Showing')}</Text>
                       </View>
                     )}
                     {primary && (
                       <View style={[styles.badge, { backgroundColor: withAlpha(colors.warning, 0.14) }]}>
                         <MaterialCommunityIcons name="bell-outline" size={11} color={colors.warning} />
-                        <Text style={[styles.badgeText, { color: colors.warning }]}>Reminders & widget</Text>
+                        <Text style={[styles.badgeText, { color: colors.warning }]}>{tr('Reminders & widget')}</Text>
                       </View>
                     )}
                   </View>
                 )}
               </View>
-              <Tap onPress={() => onEdit(cal)} accessibilityLabel={`Edit ${cal.name}`} style={[styles.editBtn, { backgroundColor: colors.surfaceVariant }]}>
+              <Tap onPress={() => onEdit(cal)} accessibilityLabel={tr('Edit {name}', { name: cal.name })} style={[styles.editBtn, { backgroundColor: colors.surfaceVariant }]}>
                 <MaterialCommunityIcons name="pencil-outline" size={17} color={colors.textSecondary} />
               </Tap>
             </Tap>
           );
         })}
-        <SettingsRow icon="plus" title="Add calendar" subtitle="Track a team rotation or someone else’s shifts" colors={colors} onPress={onNew} chevron={false} />
+        <SettingsRow icon="plus" title={tr('Add calendar')} subtitle={tr('Track a team rotation or someone else’s shifts')} colors={colors} onPress={onNew} chevron={false} />
       </SettingsCard>
     </>
   );

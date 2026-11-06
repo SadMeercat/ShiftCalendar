@@ -9,6 +9,7 @@ import { haptic } from '../../utils/haptics';
 import { Tap } from '../ui/Tap';
 import { SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   colors: ThemeColors;
@@ -22,14 +23,14 @@ interface Props {
 export function ShiftsSection({ colors, timeFormat, allShifts, onNewShift, onEditShift, onMoveShift }: Props) {
   return (
     <>
-      <SectionLabel colors={colors}>Shift types</SectionLabel>
+      <SectionLabel colors={colors}>{tr('Shift types')}</SectionLabel>
       <SettingsCard colors={colors}>
         {allShifts.map((shift, i) => (
           <Tap
             key={shift.code}
             onPress={() => onEditShift(shift)}
             activeOpacity={0.6}
-            accessibilityLabel={`Edit ${shift.label}`}
+            accessibilityLabel={tr('Edit {name}', { name: shift.label })}
             style={styles.row}
           >
             <View style={[styles.badge, { backgroundColor: shift.color }]}>
@@ -42,7 +43,7 @@ export function ShiftsSection({ colors, timeFormat, allShifts, onNewShift, onEdi
               <Text style={[styles.time, { color: colors.textSecondary }]} numberOfLines={1}>
                 {isWorkingShift(shift)
                   ? `${formatTimeRange(shift.startTime, shift.endTime, timeFormat)} · ${formatHours(getShiftHours(shift))}`
-                  : 'Day off'}
+                  : tr('Day off')}
               </Text>
             </View>
             <View style={styles.reorder}>
@@ -52,7 +53,7 @@ export function ShiftsSection({ colors, timeFormat, allShifts, onNewShift, onEdi
                   onMoveShift(shift.code, 'up');
                 }}
                 disabled={i === 0}
-                accessibilityLabel={`Move ${shift.label} up`}
+                accessibilityLabel={tr('Move {name} up', { name: shift.label })}
                 style={[styles.reorderBtn, { opacity: i === 0 ? 0.25 : 1 }]}
               >
                 <MaterialCommunityIcons name="chevron-up" size={20} color={colors.textSecondary} />
@@ -63,7 +64,7 @@ export function ShiftsSection({ colors, timeFormat, allShifts, onNewShift, onEdi
                   onMoveShift(shift.code, 'down');
                 }}
                 disabled={i === allShifts.length - 1}
-                accessibilityLabel={`Move ${shift.label} down`}
+                accessibilityLabel={tr('Move {name} down', { name: shift.label })}
                 style={[styles.reorderBtn, { opacity: i === allShifts.length - 1 ? 0.25 : 1 }]}
               >
                 <MaterialCommunityIcons name="chevron-down" size={20} color={colors.textSecondary} />
@@ -71,7 +72,7 @@ export function ShiftsSection({ colors, timeFormat, allShifts, onNewShift, onEdi
             </View>
           </Tap>
         ))}
-        <SettingsRow icon="plus" title="Add shift type" colors={colors} onPress={onNewShift} chevron={false} />
+        <SettingsRow icon="plus" title={tr('Add shift type')} colors={colors} onPress={onNewShift} chevron={false} />
       </SettingsCard>
     </>
   );

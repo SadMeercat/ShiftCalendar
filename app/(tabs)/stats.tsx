@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import { useAppSettings } from '../../hooks/SettingsContext';
 import { useShifts } from '../../hooks/ShiftContext';
 import { useToday } from '../../hooks/useToday';
@@ -27,6 +26,7 @@ import { useRuCalendarVersion } from '../../hooks/useRuCalendar';
 import { RuPaySettings, computeRuWork, estimateRuPay, payFromReceived, sumRuPay, sumRuWork } from '../../utils/ruWorkTime';
 import { Card, Divider, EmptyState, Button, Segmented, SectionLabel } from '../../components/ui/primitives';
 import { Tap } from '../../components/ui/Tap';
+import { formatDate as format, pl, tr } from '../../utils/i18n';
 
 type Period = 'month' | 'year';
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -123,7 +123,7 @@ export default function StatsScreen() {
 
   const segments: Segment[] = [
     ...allShifts.filter(isWorkingShift).map((s) => ({ key: s.code, label: s.label, color: s.color, value: stats.counts[s.code] })),
-    { key: 'leave', label: 'Leave', color: LEAVE_SEGMENT_COLOR, value: stats.leaveDays },
+    { key: 'leave', label: tr('Leave'), color: LEAVE_SEGMENT_COLOR, value: stats.leaveDays },
     ...allShifts.filter((s) => !isWorkingShift(s)).map((s) => ({ key: s.code, label: s.label, color: s.color, value: stats.counts[s.code] })),
   ];
 
@@ -145,12 +145,12 @@ export default function StatsScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, wide && styles.scrollWide]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={[Type.display, { color: colors.text }]} accessibilityRole="header">
-            Stats
+            {tr('Stats')}
           </Text>
           <Segmented
             options={[
-              { value: 'month', label: 'Month' },
-              { value: 'year', label: 'Year' },
+              { value: 'month', label: tr('Month') },
+              { value: 'year', label: tr('Year') },
             ]}
             value={period}
             onChange={(p) => {
@@ -163,18 +163,18 @@ export default function StatsScreen() {
         </View>
 
         <View style={[styles.nav, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Tap onPress={() => step(-1)} accessibilityLabel={period === 'month' ? 'Previous month' : 'Previous year'} style={styles.navBtn}>
+          <Tap onPress={() => step(-1)} accessibilityLabel={period === 'month' ? tr('Previous month') : tr('Previous year')} style={styles.navBtn}>
             <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
           </Tap>
           <View style={styles.navCenter}>
             <Text style={[styles.navTitle, { color: colors.text }]}>{periodTitle}</Text>
             {!isCurrent && (
-              <Tap onPress={() => setMonthIdx(todayMonthIdx)} accessibilityLabel="Back to current period">
-                <Text style={[styles.navToday, { color: colors.primaryText }]}>{period === 'month' ? 'Back to this month' : 'Back to this year'}</Text>
+              <Tap onPress={() => setMonthIdx(todayMonthIdx)} accessibilityLabel={tr('Back to current period')}>
+                <Text style={[styles.navToday, { color: colors.primaryText }]}>{period === 'month' ? tr('Back to this month') : tr('Back to this year')}</Text>
               </Tap>
             )}
           </View>
-          <Tap onPress={() => step(1)} accessibilityLabel={period === 'month' ? 'Next month' : 'Next year'} style={styles.navBtn}>
+          <Tap onPress={() => step(1)} accessibilityLabel={period === 'month' ? tr('Next month') : tr('Next year')} style={styles.navBtn}>
             <MaterialCommunityIcons name="chevron-right" size={24} color={colors.text} />
           </Tap>
         </View>
@@ -187,10 +187,10 @@ export default function StatsScreen() {
           <Card colors={colors} style={styles.section}>
             <EmptyState
               icon="chart-box-outline"
-              title={`Nothing scheduled in ${periodTitle}`}
-              message="Assign shifts or leave on the calendar and your hours, pay and patterns will show up here."
+              title={tr('Nothing scheduled in {period}', { period: periodTitle })}
+              message={tr('Assign shifts or leave on the calendar and your hours, pay and patterns will show up here.')}
               colors={colors}
-              action={<Button label="Open calendar" icon="calendar-month" onPress={() => router.navigate('/')} colors={colors} style={styles.emptyBtn} />}
+              action={<Button label={tr('Open calendar')} icon="calendar-month" onPress={() => router.navigate('/')} colors={colors} style={styles.emptyBtn} />}
             />
           </Card>
         ) : (
@@ -198,38 +198,38 @@ export default function StatsScreen() {
             <Card colors={colors} style={styles.section}>
               <View style={styles.heroTop}>
                 <View style={styles.flex}>
-                  <Text style={[Type.overline, { color: colors.textMuted }]}>Total hours</Text>
-                  <Text style={[styles.hero, { color: colors.text }]} accessibilityLabel={`Total hours ${stats.totalHours}`}>
+                  <Text style={[Type.overline, { color: colors.textMuted }]}>{tr('Total hours')}</Text>
+                  <Text style={[styles.hero, { color: colors.text }]} accessibilityLabel={`${tr('Total hours')} ${stats.totalHours}`}>
                     {formatHours(stats.totalHours)}
                   </Text>
                 </View>
                 {hasRates && (
                   <View style={styles.heroPay}>
-                    <Text style={[Type.overline, { color: colors.textMuted }]}>Est. pay</Text>
+                    <Text style={[Type.overline, { color: colors.textMuted }]}>{tr('Est. pay')}</Text>
                     <Text style={[styles.heroPayValue, { color: colors.text }]}>{formatMoney(stats.totalPay, currencyCode)}</Text>
                   </View>
                 )}
               </View>
               <Text style={[styles.heroSub, { color: colors.textSecondary }]}>
-                {stats.workingDays} shift{stats.workingDays === 1 ? '' : 's'}
-                {stats.overtimeHours > 0 ? ` · ${formatHours(stats.overtimeHours)} overtime` : ''}
-                {stats.leaveDays > 0 ? ` · ${stats.leaveDays} leave day${stats.leaveDays === 1 ? '' : 's'}` : ''}
+                {pl(stats.workingDays, ['shift', 'shifts'], ['смена', 'смены', 'смен'])}
+                {stats.overtimeHours > 0 ? ` · ${formatHours(stats.overtimeHours)} ${tr('overtime')}` : ''}
+                {stats.leaveDays > 0 ? ` · ${pl(stats.leaveDays, ['leave day', 'leave days'], ['день отпуска', 'дня отпуска', 'дней отпуска'])}` : ''}
               </Text>
               <View style={styles.distribution}>
-                <DistributionBar segments={segments} colors={colors} unit="days" />
+                <DistributionBar segments={segments} colors={colors} unit={tr('days')} />
               </View>
             </Card>
 
             <View style={styles.tiles}>
-              <StatTile icon="briefcase-outline" iconColor={colors.primaryText} label="Worked" value={`${stats.workingDays}`} sub={`of ${stats.totalDays} days`} colors={colors} />
-              <StatTile icon="clock-plus-outline" iconColor={colors.overtimeAccent} label="Overtime" value={formatHours(stats.overtimeHours)} sub={`${stats.overtimeDays} day${stats.overtimeDays === 1 ? '' : 's'}`} colors={colors} />
-              <StatTile icon="umbrella-beach" iconColor={colors.success} label="Leave" value={`${stats.leaveDays}`} sub={`${stats.paidLeaveDays} paid`} colors={colors} />
-              <StatTile icon="home-variant" iconColor={colors.textSecondary} label="Days off" value={`${stats.offDays}`} sub={stats.totalDays === stats.assignedDays ? 'Every day planned' : `${stats.totalDays - stats.assignedDays} not planned`} colors={colors} />
+              <StatTile icon="briefcase-outline" iconColor={colors.primaryText} label={tr('Worked')} value={`${stats.workingDays}`} sub={tr('of {n} days', { n: stats.totalDays })} colors={colors} />
+              <StatTile icon="clock-plus-outline" iconColor={colors.overtimeAccent} label={tr('Overtime')} value={formatHours(stats.overtimeHours)} sub={pl(stats.overtimeDays, ['day', 'days'], ['день', 'дня', 'дней'])} colors={colors} />
+              <StatTile icon="umbrella-beach" iconColor={colors.success} label={tr('Leave')} value={`${stats.leaveDays}`} sub={tr('{n} paid', { n: stats.paidLeaveDays })} colors={colors} />
+              <StatTile icon="home-variant" iconColor={colors.textSecondary} label={tr('Days off')} value={`${stats.offDays}`} sub={stats.totalDays === stats.assignedDays ? tr('Every day planned') : tr('{n} not planned', { n: stats.totalDays - stats.assignedDays })} colors={colors} />
             </View>
 
             {period === 'year' && (
               <>
-                <SectionLabel colors={colors}>Hours by month</SectionLabel>
+                <SectionLabel colors={colors}>{tr('Hours by month')}</SectionLabel>
                 <Card colors={colors}>
                   <MonthlyHoursChart
                     hours={monthlyHours}
@@ -243,53 +243,53 @@ export default function StatsScreen() {
 
             <View style={wide ? styles.columns : undefined}>
               <View style={half}>
-                <SectionLabel colors={colors}>Hours</SectionLabel>
+                <SectionLabel colors={colors}>{tr('Hours')}</SectionLabel>
                 <Card colors={colors}>
-                  <Row label="Shift hours" value={formatHours(stats.shiftHours)} colors={colors} />
+                  <Row label={tr('Shift hours')} value={formatHours(stats.shiftHours)} colors={colors} />
                   <Divider colors={colors} />
                   <Row
-                    label="Paid leave"
-                    note={stats.paidLeaveDays ? `${stats.paidLeaveDays} day${stats.paidLeaveDays === 1 ? '' : 's'} × ${formatHours(paidLeaveHours)}` : undefined}
+                    label={tr('Paid leave')}
+                    note={stats.paidLeaveDays ? `${pl(stats.paidLeaveDays, ['day', 'days'], ['день', 'дня', 'дней'])} × ${formatHours(paidLeaveHours)}` : undefined}
                     value={formatHours(stats.paidLeaveHours)}
                     colors={colors}
                   />
                   <Divider colors={colors} />
-                  <Row label="Overtime" value={formatHours(stats.overtimeHours)} colors={colors} />
+                  <Row label={tr('Overtime')} value={formatHours(stats.overtimeHours)} colors={colors} />
                   <Divider colors={colors} />
-                  <Row label="Total" value={formatHours(stats.totalHours)} colors={colors} strong />
+                  <Row label={tr('Total')} value={formatHours(stats.totalHours)} colors={colors} strong />
                 </Card>
               </View>
 
               <View style={half}>
-                <SectionLabel colors={colors}>Pay estimate</SectionLabel>
+                <SectionLabel colors={colors}>{tr('Pay estimate')}</SectionLabel>
                 {hasRates ? (
                   <Card colors={colors}>
                     <Row
-                      label="Regular"
-                      note={baseRate > 0 ? `${formatHours(stats.regularHours)} × ${formatMoney(baseRate, currencyCode)}` : 'No base rate set'}
+                      label={tr('Regular')}
+                      note={baseRate > 0 ? `${formatHours(stats.regularHours)} × ${formatMoney(baseRate, currencyCode)}` : tr('No base rate set')}
                       value={formatMoney(stats.basePay, currencyCode)}
                       colors={colors}
                     />
                     <Divider colors={colors} />
                     <Row
-                      label="Overtime"
-                      note={overtimeRate > 0 ? `${formatHours(stats.overtimeHours)} × ${formatMoney(overtimeRate, currencyCode)}` : 'No overtime rate set'}
+                      label={tr('Overtime')}
+                      note={overtimeRate > 0 ? `${formatHours(stats.overtimeHours)} × ${formatMoney(overtimeRate, currencyCode)}` : tr('No overtime rate set')}
                       value={formatMoney(stats.overtimeEarnings, currencyCode)}
                       colors={colors}
                     />
                     <Divider colors={colors} />
-                    <Row label="Total" value={formatMoney(stats.totalPay, currencyCode)} colors={colors} strong />
+                    <Row label={tr('Total')} value={formatMoney(stats.totalPay, currencyCode)} colors={colors} strong />
                   </Card>
                 ) : (
                   <Tap
                     onPress={() => router.navigate('/settings')}
-                    accessibilityLabel="Set your hourly rate in Settings"
+                    accessibilityLabel={tr('Set your hourly rate in Settings')}
                     style={[styles.prompt, { backgroundColor: withAlpha(colors.primary, 0.08), borderColor: withAlpha(colors.primary, 0.3) }]}
                   >
                     <MaterialCommunityIcons name="cash-multiple" size={22} color={colors.primaryText} />
                     <View style={styles.flex}>
-                      <Text style={[styles.promptTitle, { color: colors.text }]}>See what you’ll earn</Text>
-                      <Text style={[styles.promptText, { color: colors.textSecondary }]}>Add your hourly rate in Settings to get pay estimates.</Text>
+                      <Text style={[styles.promptTitle, { color: colors.text }]}>{tr('See what you’ll earn')}</Text>
+                      <Text style={[styles.promptText, { color: colors.textSecondary }]}>{tr('Add your hourly rate in Settings to get pay estimates.')}</Text>
                     </View>
                     <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
                   </Tap>
@@ -299,7 +299,7 @@ export default function StatsScreen() {
 
             {ru && (
               <RuWorkCard
-                title={period === 'month' ? periodTitle : `${year} год`}
+                title={period === 'month' ? periodTitle : tr('{year} year', { year })}
                 work={ru.work}
                 weeklyHours={weeklyHours}
                 colors={colors}
@@ -312,7 +312,7 @@ export default function StatsScreen() {
               />
             )}
 
-            <SectionLabel colors={colors}>By shift</SectionLabel>
+            <SectionLabel colors={colors}>{tr('By shift')}</SectionLabel>
             <Card colors={colors}>
               {allShifts.map((s, i) => (
                 <View key={s.code}>
@@ -320,7 +320,7 @@ export default function StatsScreen() {
                   <Row
                     label={s.label}
                     swatch={s.color}
-                    note={isWorkingShift(s) ? `${formatHours(stats.hoursByCode[s.code])} total` : 'Day off'}
+                    note={isWorkingShift(s) ? tr('{hours} total', { hours: formatHours(stats.hoursByCode[s.code]) }) : tr('Day off')}
                     value={`${stats.counts[s.code]}`}
                     colors={colors}
                   />
@@ -330,12 +330,12 @@ export default function StatsScreen() {
           </>
         )}
 
-        <SectionLabel colors={colors}>{`Leave balance · ${year}`}</SectionLabel>
+        <SectionLabel colors={colors}>{`${tr('Leave balance')} · ${year}`}</SectionLabel>
         <Card colors={colors}>
           <LeaveMeters leaveTypes={leaveTypes} balances={leaveBalances} used={leaveUsed} colors={colors} />
         </Card>
 
-        <SectionLabel colors={colors}>{`${year} at a glance`}</SectionLabel>
+        <SectionLabel colors={colors}>{tr('{year} at a glance', { year })}</SectionLabel>
         <Card colors={colors}>
           <YearlyOverview
             year={year}

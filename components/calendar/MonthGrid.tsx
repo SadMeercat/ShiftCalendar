@@ -3,14 +3,13 @@ import { View, Text, StyleSheet } from 'react-native';
 import { ShiftType } from '../../constants/shifts';
 import { LeaveType } from '../../constants/leaveTypes';
 import { ThemeColors } from '../../constants/colors';
-import { WeekStart, buildMonthGrid, monthFromIndex, weekdayOrder } from '../../utils/dates';
+import { WeekStart, buildMonthGrid, fromDateKey, monthFromIndex, weekdayOrder } from '../../utils/dates';
 import { TimeFormat } from '../../utils/time';
 import { DayCell, RangeState } from './DayCell';
 import { getRuDayInfo } from '../../utils/ruCalendar';
+import { formatDate as format, tr } from '../../utils/i18n';
 
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export interface MonthGridProps {
   monthIndex: number;
@@ -62,7 +61,6 @@ function MonthGridBase(props: MonthGridProps) {
             if (rangeStart && (d.key === rangeStart || d.key === rangeEnd)) range = 2;
             else if (rangeStart && rangeEnd && d.key > rangeStart && d.key < rangeEnd) range = 1;
             const preview = props.preview && props.preview.has(d.key) ? props.preview.get(d.key) : undefined;
-            const date = d.key.split('-');
             return (
               <DayCell
                 key={d.key}
@@ -85,7 +83,7 @@ function MonthGridBase(props: MonthGridProps) {
                 ruDay={props.ruCalendar ? getRuDayInfo(d.key) : undefined}
                 colors={props.colors}
                 isDark={props.isDark}
-                accessibilityPrefix={`${WEEKDAY_LONG[d.weekday]} ${d.day} ${MONTHS[Number(date[1]) - 1]}`}
+                accessibilityPrefix={format(fromDateKey(d.key), 'EEEE d MMMM')}
                 onPress={props.onDayPress}
                 onLongPress={props.onDayLongPress}
               />
@@ -126,7 +124,7 @@ export function WeekdayHeader({
               today && styles.weekdayToday,
             ]}
           >
-            {WEEKDAY_SHORT[wd]}
+            {tr(WEEKDAY_SHORT[wd])}
           </Text>
         );
       })}

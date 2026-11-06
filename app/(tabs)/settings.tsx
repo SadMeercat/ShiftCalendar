@@ -35,6 +35,7 @@ import { LeaveBalanceSection } from '../../components/settings/LeaveBalanceSecti
 import { AppearanceSection } from '../../components/settings/AppearanceSection';
 import { DataSection } from '../../components/settings/DataSection';
 import { AboutSection } from '../../components/settings/AboutSection';
+import { tr } from '../../utils/i18n';
 
 export default function SettingsScreen() {
   const settings = useAppSettings();
@@ -67,11 +68,11 @@ export default function SettingsScreen() {
   const saveShift = (shift: ShiftType) => {
     if (editingShift) data.updateCustomShift(editingShift.code, shift);
     else data.addCustomShift(shift);
-    showToast(editingShift ? `${shift.label} updated` : `${shift.label} added`);
+    showToast(editingShift ? tr('{name} updated', { name: shift.label }) : tr('{name} added', { name: shift.label }));
   };
   const deleteShift = (code: string) => {
     const label = data.allShifts.find((s) => s.code === code)?.label ?? code;
-    if (data.deleteCustomShift(code)) showToast(`${label} deleted`);
+    if (data.deleteCustomShift(code)) showToast(tr('{name} deleted', { name: label }));
   };
 
   // --- Calendars ---
@@ -82,25 +83,25 @@ export default function SettingsScreen() {
   const saveCalendar = (name: string, color: string) => {
     if (editingCalendar) {
       data.renameCalendar(editingCalendar.id, name, color);
-      showToast('Calendar updated');
+      showToast(tr('Calendar updated'));
     } else {
       const id = `cal_${Date.now()}`;
       data.addCalendar({ id, name, color });
       data.switchCalendar(id);
-      showToast(`${name} created`);
+      showToast(tr('{name} created', { name }));
     }
   };
   const deleteCalendar = (calendar: CalendarInfo) => {
-    Alert.alert('Delete calendar?', `“${calendar.name}” and all of its shifts, notes and leave will be permanently deleted.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(tr('Delete calendar?'), tr('“{name}” and all of its shifts, notes and leave will be permanently deleted.', { name: calendar.name }), [
+      { text: tr('Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: tr('Delete'),
         style: 'destructive',
         onPress: () => {
           haptic.heavy();
           data.deleteCalendar(calendar.id);
           if (settings.primaryCalendarId === calendar.id) updateSetting('primaryCalendarId', 'default');
-          showToast(`${calendar.name} deleted`);
+          showToast(tr('{name} deleted', { name: calendar.name }));
         },
       },
     ]);
@@ -110,9 +111,9 @@ export default function SettingsScreen() {
   const ensurePermission = async () => {
     const granted = await requestNotificationPermissions();
     if (!granted) {
-      Alert.alert('Notifications are off', 'Allow notifications for ShiftCalendar in your device settings to get reminders.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open settings', onPress: () => Linking.openSettings().catch(() => {}) },
+      Alert.alert(tr('Notifications are off'), tr('Allow notifications for ShiftCalendar in your device settings to get reminders.'), [
+        { text: tr('Not now'), style: 'cancel' },
+        { text: tr('Open settings'), onPress: () => Linking.openSettings().catch(() => {}) },
       ]);
     }
     return granted;
@@ -129,8 +130,8 @@ export default function SettingsScreen() {
   };
   const sendTest = async () => {
     const ok = await sendTestNotification(settings.preShiftAlarm ? 'alarm' : 'reminder');
-    if (ok) showToast('Test notification on its way', 'info');
-    else Alert.alert('Could not send', 'Notifications are unavailable or not allowed on this device.');
+    if (ok) showToast(tr('Test notification on its way'), 'info');
+    else Alert.alert(tr('Could not send'), tr('Notifications are unavailable or not allowed on this device.'));
   };
 
   // --- Data ---
@@ -158,7 +159,7 @@ export default function SettingsScreen() {
         showToast(success);
       }
     } catch (e: any) {
-      Alert.alert('Something went wrong', e?.message || 'Please try again.');
+      Alert.alert(tr('Something went wrong'), e?.message || tr('Please try again.'));
     } finally {
       setBusy(null);
     }
@@ -170,24 +171,24 @@ export default function SettingsScreen() {
     try {
       content = await pickCSVFile();
     } catch (e: any) {
-      Alert.alert('Could not open file', e?.message || 'Please try again.');
+      Alert.alert(tr('Could not open file'), e?.message || tr('Please try again.'));
     } finally {
       setBusy(null);
     }
     if (!content) return;
     const result = parseCSVContent(content, data.allShifts, data.leaveTypes);
     if (!result || result.days === 0) {
-      Alert.alert('Nothing to import', 'This file has no ShiftCalendar days in it. Export a CSV from the app to see the expected format.');
+      Alert.alert(tr('Nothing to import'), tr('This file has no ShiftCalendar days in it. Export a CSV from the app to see the expected format.'));
       return;
     }
-    Alert.alert('Import spreadsheet?', `${describeImport(result)}\n\nImporting into “${data.activeCalendar.name}”. Matching dates are replaced.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(tr('Import spreadsheet?'), `${describeImport(result)}\n\n${tr('Importing into “{name}”. Matching dates are replaced.', { name: data.activeCalendar.name })}`, [
+      { text: tr('Cancel'), style: 'cancel' },
       {
-        text: 'Import',
+        text: tr('Import'),
         onPress: () => {
           data.importDays(result);
           haptic.success();
-          showToast(`Imported ${result.days} days`);
+          showToast(tr('Imported {n} days', { n: result.days }));
         },
       },
     ]);
@@ -199,7 +200,7 @@ export default function SettingsScreen() {
     try {
       content = await pickBackupFile();
     } catch (e: any) {
-      Alert.alert('Could not open file', e?.message || 'Please try again.');
+      Alert.alert(tr('Could not open file'), e?.message || tr('Please try again.'));
     } finally {
       setBusy(null);
     }
@@ -208,13 +209,13 @@ export default function SettingsScreen() {
     try {
       summary = inspectBackup(content);
     } catch (e: any) {
-      Alert.alert('Not a backup', e?.message || 'This file can’t be restored.');
+      Alert.alert(tr('Not a backup'), e?.message || tr('This file can’t be restored.'));
       return;
     }
-    Alert.alert('Restore backup?', describeBackup(summary), [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(tr('Restore backup?'), describeBackup(summary), [
+      { text: tr('Cancel'), style: 'cancel' },
       {
-        text: 'Restore',
+        text: tr('Restore'),
         style: 'destructive',
         onPress: () =>
           run(
@@ -223,17 +224,17 @@ export default function SettingsScreen() {
               await restoreBackup(summary);
               await Promise.all([data.reload(), reloadSettings()]);
             },
-            'Backup restored'
+            tr('Backup restored')
           ),
       },
     ]);
   };
 
   const resetAll = () => {
-    Alert.alert('Erase all data?', 'Every calendar, shift, note and setting will be deleted from this device. Make a backup first if you might want it back.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(tr('Erase all data?'), tr('Every calendar, shift, note and setting will be deleted from this device. Make a backup first if you might want it back.'), [
+      { text: tr('Cancel'), style: 'cancel' },
       {
-        text: 'Erase everything',
+        text: tr('Erase everything'),
         style: 'destructive',
         onPress: async () => {
           haptic.heavy();
@@ -253,7 +254,7 @@ export default function SettingsScreen() {
         keyboardDismissMode="on-drag"
       >
         <Text style={[Type.display, styles.title, { color: colors.text }]} accessibilityRole="header">
-          Settings
+          {tr('Settings')}
         </Text>
 
         <ShiftsSection
@@ -346,6 +347,8 @@ export default function SettingsScreen() {
           setShowShiftTimes={(v) => updateSetting('showShiftTimes', v)}
           hapticsEnabled={settings.hapticsEnabled}
           setHapticsEnabled={(v) => updateSetting('hapticsEnabled', v)}
+          language={settings.language}
+          setLanguage={(v) => updateSetting('language', v)}
         />
 
         <DataSection
@@ -356,10 +359,10 @@ export default function SettingsScreen() {
           setYear={setExportYear}
           month={exportMonth}
           setMonth={setExportMonth}
-          onExportCSV={() => run('csv', () => exportCSV(exportOptions()), 'Spreadsheet exported')}
-          onExportPDF={() => run('pdf', () => exportPDF(exportOptions()), 'PDF exported')}
+          onExportCSV={() => run('csv', () => exportCSV(exportOptions()), tr('Spreadsheet exported'))}
+          onExportPDF={() => run('pdf', () => exportPDF(exportOptions()), tr('PDF exported'))}
           onImportCSV={importCSV}
-          onBackup={() => run('backup', backupAll, 'Backup saved')}
+          onBackup={() => run('backup', backupAll, tr('Backup saved'))}
           onRestore={restore}
           onReset={resetAll}
         />

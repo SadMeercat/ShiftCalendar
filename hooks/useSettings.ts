@@ -8,6 +8,7 @@ import { WeekStart } from '../utils/dates';
 import { TimeFormat } from '../utils/time';
 import { setHapticsEnabled } from '../utils/haptics';
 import { runMigrations } from '../utils/migrations';
+import { LanguageSetting, setLanguage } from '../utils/i18n';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -34,6 +35,8 @@ export interface Settings {
   /** Оклад в месяц до вычета НДФЛ (0 — считать по часовой ставке). */
   monthlySalary: number;
   ndflPercent: number;
+  /** Язык интерфейса: системный, русский или английский. */
+  language: LanguageSetting;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -56,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   weeklyHours: 40,
   monthlySalary: 0,
   ndflPercent: 13,
+  language: 'system',
 };
 
 /** Storage keys (the older ones are unchanged so existing preferences carry over). */
@@ -79,6 +83,7 @@ export const SETTINGS_KEYS: Record<keyof Settings, string> = {
   weeklyHours: 'ru_weekly_hours',
   monthlySalary: 'ru_monthly_salary',
   ndflPercent: 'ru_ndfl_percent',
+  language: 'app_language',
 };
 
 function parseNumber(raw: string, min: number, max: number, fallback: number) {
@@ -123,6 +128,8 @@ function parseSettings(raw: Map<string, string | null>): Settings {
   if (salary) s.monthlySalary = parseNumber(salary, 0, 1e9, 0);
   const ndfl = get('ndflPercent');
   if (ndfl) s.ndflPercent = parseNumber(ndfl, 0, 50, 13);
+  const lang = get('language');
+  if (lang === 'ru' || lang === 'en' || lang === 'system') s.language = lang;
   return s;
 }
 
@@ -141,6 +148,7 @@ export function useSettings() {
       settingsRef.current = next;
       setSettings(next);
       setHapticsEnabled(next.hapticsEnabled);
+      setLanguage(next.language);
     } catch (e) {
       console.error('Failed to load settings', e);
     } finally {
@@ -158,6 +166,7 @@ export function useSettings() {
     settingsRef.current = next;
     setSettings(next);
     if (key === 'hapticsEnabled') setHapticsEnabled(value as boolean);
+    if (key === 'language') setLanguage(value as LanguageSetting);
     AsyncStorage.setItem(SETTINGS_KEYS[key], String(value)).catch(console.error);
   }, []);
 

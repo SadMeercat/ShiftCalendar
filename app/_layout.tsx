@@ -17,6 +17,15 @@ import { useRuCalendarAutoSync } from '../hooks/useRuCalendar';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+/**
+ * При смене языка всё приложение монтируется заново: так переводятся и тексты в
+ * мемоизированных компонентах, и стандартные названия смен и отпусков.
+ */
+function LanguageScope({ children }: { children: React.ReactNode }) {
+  const { language } = useAppSettings();
+  return <React.Fragment key={language}>{children}</React.Fragment>;
+}
+
 function AppShell() {
   const { isDark, colors, loaded, onboardingComplete } = useAppSettings();
   const { loading } = useShifts();
@@ -62,11 +71,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
         <SettingsProvider>
-          <ShiftProvider>
-            <BottomSheetModalProvider>
-              <AppShell />
-            </BottomSheetModalProvider>
-          </ShiftProvider>
+          <LanguageScope>
+            <ShiftProvider>
+              <BottomSheetModalProvider>
+                <AppShell />
+              </BottomSheetModalProvider>
+            </ShiftProvider>
+          </LanguageScope>
         </SettingsProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>

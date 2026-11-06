@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { BottomSheetModal, BottomSheetFlatList, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import { useShifts } from '../hooks/ShiftContext';
 import { useAppSettings } from '../hooks/SettingsContext';
 import { daysBetweenKeys, fromDateKey, todayKey } from '../utils/dates';
@@ -11,6 +10,7 @@ import { readableTextColor, withAlpha } from '../utils/color';
 import { Tap } from './ui/Tap';
 import { EmptyState } from './ui/primitives';
 import { SheetHeader, useSheetBackdrop, useSheetChrome } from './ui/sheet';
+import { formatDate as format, pl, tr } from '../utils/i18n';
 
 interface Props {
   onSelectDate: (dateKey: string) => void;
@@ -19,11 +19,11 @@ interface Props {
 
 function relativeLabel(date: string, today: string) {
   const diff = daysBetweenKeys(today, date);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Tomorrow';
-  if (diff === -1) return 'Yesterday';
-  if (diff > 1 && diff < 60) return `In ${diff} days`;
-  if (diff < -1 && diff > -60) return `${-diff} days ago`;
+  if (diff === 0) return tr('Today');
+  if (diff === 1) return tr('Tomorrow');
+  if (diff === -1) return tr('Yesterday');
+  if (diff > 1 && diff < 60) return tr('In {days}', { days: pl(diff, ['day', 'days'], ['день', 'дня', 'дней']) });
+  if (diff < -1 && diff > -60) return tr('{days} ago', { days: pl(-diff, ['day', 'days'], ['день', 'дня', 'дней']) });
   return format(fromDateKey(date), 'yyyy');
 }
 
@@ -94,8 +94,8 @@ export const NotesSearchSheet = forwardRef<BottomSheetModal, Props>(function Not
     >
       <View style={styles.top}>
         <SheetHeader
-          title="Notes"
-          subtitle={`${results.length} ${results.length === 1 ? 'note' : 'notes'}${query ? ' found' : ''}`}
+          title={tr('Notes')}
+          subtitle={`${pl(results.length, ['note', 'notes'], ['заметка', 'заметки', 'заметок'])}${query ? ' ' + tr('found') : ''}`}
           colors={colors}
           onClose={close}
         />
@@ -105,15 +105,15 @@ export const NotesSearchSheet = forwardRef<BottomSheetModal, Props>(function Not
             style={[styles.searchInput, { color: colors.text }]}
             value={query}
             onChangeText={setQuery}
-            placeholder="Search notes"
+            placeholder={tr('Search notes')}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
-            accessibilityLabel="Search notes"
+            accessibilityLabel={tr('Search notes')}
           />
           {query.length > 0 && (
-            <Tap onPress={() => setQuery('')} accessibilityLabel="Clear search">
+            <Tap onPress={() => setQuery('')} accessibilityLabel={tr('Clear search')}>
               <MaterialCommunityIcons name="close-circle" size={18} color={colors.textSecondary} />
             </Tap>
           )}
@@ -127,8 +127,8 @@ export const NotesSearchSheet = forwardRef<BottomSheetModal, Props>(function Not
         ListEmptyComponent={
           <EmptyState
             icon={query ? 'file-search-outline' : 'note-text-outline'}
-            title={query ? 'No matching notes' : 'No notes yet'}
-            message={query ? 'Try a different word.' : 'Open any day and add a note — it will show up here.'}
+            title={query ? tr('No matching notes') : tr('No notes yet')}
+            message={query ? tr('Try a different word.') : tr('Open any day and add a note — it will show up here.')}
             colors={colors}
           />
         }
@@ -140,8 +140,8 @@ export const NotesSearchSheet = forwardRef<BottomSheetModal, Props>(function Not
           const isPastStart = date < today && (index === 0 || results[index - 1][0] >= today);
           return (
             <View>
-              {isPastStart && <Text style={[styles.groupLabel, { color: colors.textMuted }]}>Earlier</Text>}
-              {index === 0 && date >= today && <Text style={[styles.groupLabel, { color: colors.textMuted }]}>Upcoming</Text>}
+              {isPastStart && <Text style={[styles.groupLabel, { color: colors.textMuted }]}>{tr('Earlier')}</Text>}
+              {index === 0 && date >= today && <Text style={[styles.groupLabel, { color: colors.textMuted }]}>{tr('Upcoming')}</Text>}
               <Tap
                 onPress={() => select(date)}
                 activeOpacity={0.7}

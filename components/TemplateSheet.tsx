@@ -2,7 +2,6 @@ import React, { forwardRef, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import { useShifts } from '../hooks/ShiftContext';
 import { useAppSettings } from '../hooks/SettingsContext';
 import { ShiftType } from '../constants/shifts';
@@ -22,6 +21,7 @@ import { Tap } from './ui/Tap';
 import { Chip, SectionLabel } from './ui/primitives';
 import { SheetActionBar, SheetHeader, useSheetChrome } from './ui/sheet';
 import { QUICK_FILL_COLLAPSED, durationLabel } from './RepeatSheet';
+import { formatDate as format, pl, tr } from '../utils/i18n';
 
 interface Props {
   /** Only the active quick-fill sheet publishes a calendar preview. */
@@ -121,7 +121,7 @@ export const TemplateSheet = forwardRef<BottomSheet, Props>(function TemplateShe
 
   const apply = () => {
     if (!plan || !template) return;
-    onApply(plan.entries, `${template.name} applied · ${format(fromDateKey(startKey), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d, yyyy')}`);
+    onApply(plan.entries, `${tr(template.name)} ${tr('applied')} · ${format(fromDateKey(startKey), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d, yyyy')}`);
   };
 
   return (
@@ -137,19 +137,19 @@ export const TemplateSheet = forwardRef<BottomSheet, Props>(function TemplateShe
       <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {!template ? (
           <>
-            <SheetHeader title="Rotation templates" subtitle="Pick a rotation — you’ll see a preview on the calendar before anything changes." colors={colors} onClose={onClose} />
+            <SheetHeader title={tr('Rotation templates')} subtitle={tr('Pick a rotation — you’ll see a preview on the calendar before anything changes.')} colors={colors} onClose={onClose} />
             {SHIFT_TEMPLATES.map((t) => (
               <Tap
                 key={t.id}
                 onPress={() => choose(t)}
                 activeOpacity={0.7}
-                accessibilityLabel={`${t.name}: ${t.description}`}
+                accessibilityLabel={`${tr(t.name)}: ${tr(t.description)}`}
                 style={[styles.templateCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
                 <View style={styles.templateTop}>
                   <View style={styles.flex}>
-                    <Text style={[styles.templateName, { color: colors.text }]}>{t.name}</Text>
-                    <Text style={[styles.templateDesc, { color: colors.textSecondary }]}>{t.description}</Text>
+                    <Text style={[styles.templateName, { color: colors.text }]}>{tr(t.name)}</Text>
+                    <Text style={[styles.templateDesc, { color: colors.textSecondary }]}>{tr(t.description)}</Text>
                   </View>
                   <View style={[styles.cycle, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
                     <Text style={[styles.cycleText, { color: colors.primaryText }]}>{t.pattern.length} days</Text>
@@ -165,50 +165,50 @@ export const TemplateSheet = forwardRef<BottomSheet, Props>(function TemplateShe
             <SheetActionBar
               summary={
                 plan
-                  ? `${format(fromDateKey(startKey), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d')}\n${changed} change${changed === 1 ? '' : 's'}${plan.keptLeave ? ` · ${plan.keptLeave} leave kept` : ''}`
+                  ? `${format(fromDateKey(startKey), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d')}\n${pl(changed, ['change', 'changes'], ['изменение', 'изменения', 'изменений'])}${plan.keptLeave ? ` · ${tr('{n} leave kept', { n: plan.keptLeave })}` : ''}`
                   : ''
               }
-              actionLabel="Apply"
+              actionLabel={tr('Apply')}
               onAction={apply}
               onOptions={() => snapTo(1)}
               disabled={!plan || changed === 0}
               colors={colors}
             />
             <PatternStrip template={template} mapping={mapping} />
-            <Text style={[styles.summary, { color: colors.textSecondary }]}>{template.description}</Text>
+            <Text style={[styles.summary, { color: colors.textSecondary }]}>{tr(template.description)}</Text>
 
-            <SectionLabel colors={colors}>Starts on</SectionLabel>
+            <SectionLabel colors={colors}>{tr('Starts on')}</SectionLabel>
             <View style={[styles.startRow, { backgroundColor: colors.surfaceVariant }]}>
               <MaterialCommunityIcons name="calendar-start" size={20} color={colors.primaryText} />
               <View style={styles.flex}>
                 <Text style={[styles.startDate, { color: colors.text }]}>{format(fromDateKey(startKey), 'EEEE, MMM d, yyyy')}</Text>
-                <Text style={[styles.startHint, { color: colors.textSecondary }]}>Tap a day on the calendar to change</Text>
+                <Text style={[styles.startHint, { color: colors.textSecondary }]}>{tr('Tap a day on the calendar to change')}</Text>
               </View>
-              {startKey !== todayKey() && <Chip label="Today" compact onPress={() => onStartChange(todayKey())} colors={colors} />}
+              {startKey !== todayKey() && <Chip label={tr('Today')} compact onPress={() => onStartChange(todayKey())} colors={colors} />}
             </View>
 
-            <SectionLabel colors={colors}>Fill for</SectionLabel>
+            <SectionLabel colors={colors}>{tr('Fill for')}</SectionLabel>
             <View style={styles.chips}>
               {DURATION_OPTIONS.map((opt) => (
                 <Chip key={opt} label={durationLabel(opt, startKey)} selected={duration === opt} onPress={() => setDuration(opt)} colors={colors} />
               ))}
             </View>
 
-            <SectionLabel colors={colors}>Shift mapping</SectionLabel>
+            <SectionLabel colors={colors}>{tr('Shift mapping')}</SectionLabel>
             <Text style={[styles.mappingHint, { color: colors.textSecondary }]}>
-              Choose which of your shifts fills each part of the rotation.
+              {tr('Choose which of your shifts fills each part of the rotation.')}
             </Text>
             {unmapped.length > 0 && (
               <View style={[styles.warn, { backgroundColor: withAlpha(colors.warning, 0.12) }]}>
                 <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.warning} />
                 <Text style={[styles.warnText, { color: colors.warning }]}>
-                  {unmapped.map((s) => SLOT_LABELS[s]).join(', ')} {unmapped.length === 1 ? 'is' : 'are'} skipped — pick a shift below.
+                  {tr('Skipped: {slots} — pick a shift below.', { slots: unmapped.map((s) => tr(SLOT_LABELS[s])).join(', ') })}
                 </Text>
               </View>
             )}
             {usedSlots.map((slot) => (
               <View key={slot} style={styles.mappingRow}>
-                <Text style={[styles.slotLabel, { color: colors.text }]}>{SLOT_LABELS[slot]}</Text>
+                <Text style={[styles.slotLabel, { color: colors.text }]}>{tr(SLOT_LABELS[slot])}</Text>
                 <View style={styles.mappingChips}>
                   {allShifts.map((s) => (
                     <Chip
@@ -221,7 +221,7 @@ export const TemplateSheet = forwardRef<BottomSheet, Props>(function TemplateShe
                       compact
                     />
                   ))}
-                  <Chip label="Skip" selected={!mapping[slot]} onPress={() => setMapping((m) => ({ ...m, [slot]: null }))} colors={colors} compact />
+                  <Chip label={tr('Skip')} selected={!mapping[slot]} onPress={() => setMapping((m) => ({ ...m, [slot]: null }))} colors={colors} compact />
                 </View>
               </View>
             ))}

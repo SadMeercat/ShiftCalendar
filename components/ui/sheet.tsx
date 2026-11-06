@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemeColors } from '../../constants/colors';
 import { Radius, Type } from '../../constants/theme';
 import { Tap } from './Tap';
+import { tr } from '../../utils/i18n';
 
 export function useSheetChrome(colors: ThemeColors) {
   return useMemo(
@@ -54,7 +55,7 @@ export function SheetHeader({
   return (
     <View style={styles.header}>
       {onBack && (
-        <Tap onPress={onBack} accessibilityLabel="Back" style={[styles.headerBtn, { backgroundColor: colors.surfaceVariant }]}>
+        <Tap onPress={onBack} accessibilityLabel={tr('Back')} style={[styles.headerBtn, { backgroundColor: colors.surfaceVariant }]}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={colors.text} />
         </Tap>
       )}
@@ -70,7 +71,7 @@ export function SheetHeader({
       </View>
       {right}
       {onClose && (
-        <Tap onPress={onClose} accessibilityLabel="Close" style={[styles.headerBtn, { backgroundColor: colors.surfaceVariant }]}>
+        <Tap onPress={onClose} accessibilityLabel={tr('Close')} style={[styles.headerBtn, { backgroundColor: colors.surfaceVariant }]}>
           <MaterialCommunityIcons name="close" size={20} color={colors.text} />
         </Tap>
       )}
@@ -100,7 +101,7 @@ export function SheetActionBar({
         {summary}
       </Text>
       {onOptions && (
-        <Tap onPress={onOptions} accessibilityLabel="Show options" style={[styles.optionsBtn, { backgroundColor: colors.surfaceVariant }]}>
+        <Tap onPress={onOptions} accessibilityLabel={tr('Show options')} style={[styles.optionsBtn, { backgroundColor: colors.surfaceVariant }]}>
           <MaterialCommunityIcons name="tune-variant" size={18} color={colors.text} />
         </Tap>
       )}

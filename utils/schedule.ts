@@ -2,6 +2,7 @@ import { ShiftType, isWorkingShift } from '../constants/shifts';
 import { LeaveType } from '../constants/leaveTypes';
 import { addDaysToKey, fromDateKey, toDateKey } from './dates';
 import { TimeFormat, formatTime, formatTimeRangeShort } from './time';
+import { tr } from './i18n';
 
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -34,7 +35,7 @@ export function getUpcoming(input: UpcomingInput): UpcomingInfo {
     today = {
       label: shift.label,
       color: shift.color,
-      detail: working ? formatTimeRangeShort(shift.startTime, shift.endTime, input.timeFormat) : 'Day off',
+      detail: working ? formatTimeRangeShort(shift.startTime, shift.endTime, input.timeFormat) : tr('Day off'),
       working,
     };
   }
@@ -49,7 +50,7 @@ export function getUpcoming(input: UpcomingInput): UpcomingInfo {
       next = {
         label: s.label,
         color: s.color,
-        when: i === 1 ? 'Tomorrow' : `${SHORT_DAYS[d.getDay()]} ${d.getDate()}`,
+        when: i === 1 ? tr('Tomorrow') : `${tr(SHORT_DAYS[d.getDay()])} ${d.getDate()}`,
         time: formatTime(s.startTime, input.timeFormat),
       };
       break;

@@ -7,6 +7,7 @@ import { ThemeColors } from '../../constants/colors';
 import { elevation } from '../../constants/theme';
 import { readableTextColor, withAlpha } from '../../utils/color';
 import { Tap } from '../ui/Tap';
+import { tr } from '../../utils/i18n';
 
 export type Brush = { kind: 'shift'; code: string } | { kind: 'leave'; id: string } | { kind: 'erase' };
 
@@ -44,7 +45,7 @@ function BrushChip({
   return (
     <Tap
       onPress={onPress}
-      accessibilityLabel={`Brush: ${label}`}
+      accessibilityLabel={`${tr('Brush:')} ${label}`}
       accessibilityState={{ selected }}
       style={[
         styles.chip,
@@ -99,7 +100,7 @@ export function PaintPalette({ shifts, leaveTypes, brush, onSelect, colors }: Pr
         ))}
         <View style={[styles.sep, { backgroundColor: colors.border }]} />
         <BrushChip
-          label="Erase"
+          label={tr('Erase')}
           icon="eraser"
           color={colors.textSecondary}
           selected={key === 'erase'}

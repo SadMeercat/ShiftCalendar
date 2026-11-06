@@ -7,6 +7,7 @@ import { TimeFormat } from '../../utils/time';
 import { haptic } from '../../utils/haptics';
 import { Segmented, SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { LanguageSetting, tr } from '../../utils/i18n';
 
 interface Props {
   colors: ThemeColors;
@@ -20,6 +21,8 @@ interface Props {
   setShowShiftTimes: (v: boolean) => void;
   hapticsEnabled: boolean;
   setHapticsEnabled: (v: boolean) => void;
+  language: LanguageSetting;
+  setLanguage: (v: LanguageSetting) => void;
 }
 
 function Labeled({ label, colors, children }: { label: string; colors: ThemeColors; children: React.ReactNode }) {
@@ -39,37 +42,49 @@ export function AppearanceSection(props: Props) {
   };
   return (
     <>
-      <SectionLabel colors={colors}>Appearance</SectionLabel>
+      <SectionLabel colors={colors}>{tr('Appearance')}</SectionLabel>
       <SettingsCard colors={colors}>
-        <Labeled label="Theme" colors={colors}>
+        <Labeled label={tr('Language')} colors={colors}>
           <Segmented
             options={[
-              { value: 'light', label: 'Light', icon: 'white-balance-sunny' },
-              { value: 'dark', label: 'Dark', icon: 'weather-night' },
-              { value: 'system', label: 'Auto', icon: 'theme-light-dark' },
+              { value: 'system', label: tr('Auto') },
+              { value: 'ru', label: 'Русский' },
+              { value: 'en', label: 'English' },
+            ]}
+            value={props.language}
+            onChange={pick(props.setLanguage)}
+            colors={colors}
+          />
+        </Labeled>
+        <Labeled label={tr('Theme')} colors={colors}>
+          <Segmented
+            options={[
+              { value: 'light', label: tr('Light'), icon: 'white-balance-sunny' },
+              { value: 'dark', label: tr('Dark'), icon: 'weather-night' },
+              { value: 'system', label: tr('Auto'), icon: 'theme-light-dark' },
             ]}
             value={props.themeMode}
             onChange={pick(props.setThemeMode)}
             colors={colors}
           />
         </Labeled>
-        <Labeled label="Week starts on" colors={colors}>
+        <Labeled label={tr('Week starts on')} colors={colors}>
           <Segmented
             options={[
-              { value: 6, label: 'Saturday' },
-              { value: 0, label: 'Sunday' },
-              { value: 1, label: 'Monday' },
+              { value: 6, label: tr('Saturday') },
+              { value: 0, label: tr('Sunday') },
+              { value: 1, label: tr('Monday') },
             ]}
             value={props.weekStart}
             onChange={pick(props.setWeekStart)}
             colors={colors}
           />
         </Labeled>
-        <Labeled label="Time format" colors={colors}>
+        <Labeled label={tr('Time format')} colors={colors}>
           <Segmented
             options={[
-              { value: '24h', label: '24-hour · 15:00' },
-              { value: '12h', label: '12-hour · 3 PM' },
+              { value: '24h', label: tr('24-hour · 15:00') },
+              { value: '12h', label: tr('12-hour · 3 PM') },
             ]}
             value={props.timeFormat}
             onChange={pick(props.setTimeFormat)}
@@ -78,16 +93,16 @@ export function AppearanceSection(props: Props) {
         </Labeled>
         <SettingsRow
           icon="clock-time-four-outline"
-          title="Start times on calendar"
-          subtitle="Show each shift’s start time in the month grid"
+          title={tr('Start times on calendar')}
+          subtitle={tr('Show each shift’s start time in the month grid')}
           colors={colors}
           switchValue={props.showShiftTimes}
           onSwitch={props.setShowShiftTimes}
         />
         <SettingsRow
           icon="vibrate"
-          title="Haptic feedback"
-          subtitle="Subtle vibrations when you tap and assign"
+          title={tr('Haptic feedback')}
+          subtitle={tr('Subtle vibrations when you tap and assign')}
           colors={colors}
           switchValue={props.hapticsEnabled}
           onSwitch={props.setHapticsEnabled}

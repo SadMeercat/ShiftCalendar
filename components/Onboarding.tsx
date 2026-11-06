@@ -13,6 +13,7 @@ import { todayKey } from '../utils/dates';
 import { haptic } from '../utils/haptics';
 import { Tap } from './ui/Tap';
 import { Button, Segmented } from './ui/primitives';
+import { tr } from '../utils/i18n';
 
 const FEATURES: { icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; title: string; text: string }[] = [
   { icon: 'brush-variant', title: 'Fill a month in seconds', text: 'Paint days, repeat a pattern, or apply a rotation template.' },
@@ -83,8 +84,8 @@ export function Onboarding() {
           ))}
         </View>
         {step < 2 && (
-          <Tap onPress={settings.completeOnboarding} accessibilityLabel="Skip setup" style={styles.skip}>
-            <Text style={[styles.skipText, { color: colors.textSecondary }]}>Skip</Text>
+          <Tap onPress={settings.completeOnboarding} accessibilityLabel={tr('Skip setup')} style={styles.skip}>
+            <Text style={[styles.skipText, { color: colors.textSecondary }]}>{tr('Skip')}</Text>
           </Tap>
         )}
       </View>
@@ -94,9 +95,9 @@ export function Onboarding() {
           {step === 0 && (
             <>
               <DemoCalendar colors={colors} />
-              <Text style={[styles.title, { color: colors.text }]}>Your shifts,{'\n'}at a glance</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{tr('Your shifts,')}{'\n'}{tr('at a glance')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                A private, offline calendar built for shift work.
+                {tr('A private, offline calendar built for shift work.')}
               </Text>
               <View style={styles.features}>
                 {FEATURES.map((f) => (
@@ -105,8 +106,8 @@ export function Onboarding() {
                       <MaterialCommunityIcons name={f.icon} size={22} color={colors.primaryText} />
                     </View>
                     <View style={styles.flex}>
-                      <Text style={[styles.featureTitle, { color: colors.text }]}>{f.title}</Text>
-                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>{f.text}</Text>
+                      <Text style={[styles.featureTitle, { color: colors.text }]}>{tr(f.title)}</Text>
+                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>{tr(f.text)}</Text>
                     </View>
                   </View>
                 ))}
@@ -119,35 +120,35 @@ export function Onboarding() {
               <View style={[styles.stepIcon, { backgroundColor: withAlpha(colors.primary, 0.14) }]}>
                 <MaterialCommunityIcons name="tune-variant" size={30} color={colors.primaryText} />
               </View>
-              <Text style={[styles.title, { color: colors.text }]}>Make it yours</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>You can change these any time in Settings.</Text>
-              <Text style={[styles.label, { color: colors.text }]}>Week starts on</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{tr('Make it yours')}</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{tr('You can change these any time in Settings.')}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{tr('Week starts on')}</Text>
               <Segmented
                 options={[
-                  { value: 6, label: 'Saturday' },
-                  { value: 0, label: 'Sunday' },
-                  { value: 1, label: 'Monday' },
+                  { value: 6, label: tr('Saturday') },
+                  { value: 0, label: tr('Sunday') },
+                  { value: 1, label: tr('Monday') },
                 ]}
                 value={settings.weekStart}
                 onChange={(v) => settings.updateSetting('weekStart', v)}
                 colors={colors}
               />
-              <Text style={[styles.label, { color: colors.text }]}>Time format</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{tr('Time format')}</Text>
               <Segmented
                 options={[
-                  { value: '24h', label: '24-hour · 15:00' },
-                  { value: '12h', label: '12-hour · 3 PM' },
+                  { value: '24h', label: tr('24-hour · 15:00') },
+                  { value: '12h', label: tr('12-hour · 3 PM') },
                 ]}
                 value={settings.timeFormat}
                 onChange={(v) => settings.updateSetting('timeFormat', v)}
                 colors={colors}
               />
-              <Text style={[styles.label, { color: colors.text }]}>Theme</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{tr('Theme')}</Text>
               <Segmented
                 options={[
-                  { value: 'light', label: 'Light' },
-                  { value: 'dark', label: 'Dark' },
-                  { value: 'system', label: 'Auto' },
+                  { value: 'light', label: tr('Light') },
+                  { value: 'dark', label: tr('Dark') },
+                  { value: 'system', label: tr('Auto') },
                 ]}
                 value={settings.themeMode}
                 onChange={(v) => settings.updateSetting('themeMode', v)}
@@ -161,9 +162,9 @@ export function Onboarding() {
               <View style={[styles.stepIcon, { backgroundColor: withAlpha(colors.primary, 0.14) }]}>
                 <MaterialCommunityIcons name="view-grid-plus-outline" size={30} color={colors.primaryText} />
               </View>
-              <Text style={[styles.title, { color: colors.text }]}>Work a rotation?</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{tr('Work a rotation?')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Pick one to fill the next 3 months from today. You can fine-tune any day afterwards.
+                {tr('Pick one to fill the next 3 months from today. You can fine-tune any day afterwards.')}
               </Text>
               {SHIFT_TEMPLATES.slice(0, 6).map((t) => {
                 const selected = template?.id === t.id;
@@ -174,7 +175,7 @@ export function Onboarding() {
                       haptic.selection();
                       setTemplate(selected ? null : t);
                     }}
-                    accessibilityLabel={`${t.name}: ${t.description}`}
+                    accessibilityLabel={`${tr(t.name)}: ${tr(t.description)}`}
                     accessibilityState={{ selected }}
                     style={[
                       styles.template,
@@ -185,8 +186,8 @@ export function Onboarding() {
                     ]}
                   >
                     <View style={styles.flex}>
-                      <Text style={[styles.templateName, { color: colors.text }]}>{t.name}</Text>
-                      <Text style={[styles.templateDesc, { color: colors.textSecondary }]}>{t.description}</Text>
+                      <Text style={[styles.templateName, { color: colors.text }]}>{tr(t.name)}</Text>
+                      <Text style={[styles.templateDesc, { color: colors.textSecondary }]}>{tr(t.description)}</Text>
                     </View>
                     <MaterialCommunityIcons
                       name={selected ? 'check-circle' : 'checkbox-blank-circle-outline'}
@@ -203,7 +204,7 @@ export function Onboarding() {
 
       <View style={styles.footer}>
         <Button
-          label={step === 0 ? 'Get started' : step === 1 ? 'Continue' : template ? `Use ${template.name}` : 'I’ll set it up myself'}
+          label={step === 0 ? tr('Get started') : step === 1 ? tr('Continue') : template ? tr('Use {name}', { name: tr(template.name) }) : tr('I’ll set it up myself')}
           icon={step === 2 ? 'check' : 'arrow-right'}
           iconPosition={step === 2 ? 'left' : 'right'}
           onPress={next}

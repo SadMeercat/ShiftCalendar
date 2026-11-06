@@ -9,6 +9,7 @@ import { withAlpha } from '../../utils/color';
 import { haptic } from '../../utils/haptics';
 import { Tap } from '../ui/Tap';
 import { SheetHeader, useSheetBackdrop, useSheetChrome } from '../ui/sheet';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   value: string;
@@ -44,16 +45,16 @@ export const CurrencySheet = forwardRef<BottomSheetModal, Props>(function Curren
       {...chrome}
     >
       <View style={styles.top}>
-        <SheetHeader title="Currency" colors={colors} onClose={close} />
+        <SheetHeader title={tr('Currency')} colors={colors} onClose={close} />
         <View style={[styles.search, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
           <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
           <BottomSheetTextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search currencies"
+            placeholder={tr('Search currencies')}
             placeholderTextColor={colors.textMuted}
             autoCorrect={false}
-            accessibilityLabel="Search currencies"
+            accessibilityLabel={tr('Search currencies')}
             style={[styles.searchInput, { color: colors.text }]}
           />
         </View>

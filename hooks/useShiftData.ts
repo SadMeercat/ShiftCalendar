@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ShiftType, DEFAULT_SHIFTS } from '../constants/shifts';
-import { LeaveType, DEFAULT_LEAVE_TYPES, defaultLeaveBalances } from '../constants/leaveTypes';
+import { LeaveType, DEFAULT_LEAVE_TYPES, defaultLeaveBalances, localizedLeaveTypes } from '../constants/leaveTypes';
 import { CURRENT_SCHEMA, SCHEMA_VERSION_KEY, runMigrations } from '../utils/migrations';
+import { localizeDefault, tr } from '../utils/i18n';
 
 const CUSTOM_SHIFTS_KEY = 'custom_shifts';
 const ALL_SHIFTS_KEY = 'all_shifts_v2';
@@ -176,6 +177,13 @@ async function loadFromStorage(): Promise<LoadedState> {
   const store: Record<string, CalendarData> = {};
   for (const cal of calendars) store[cal.id] = parseCalendarData(get, cal.id);
 
+  // Стандартные названия — на языке приложения (см. localizeDefault).
+  allShifts = allShifts.map((s) => {
+    const def = s.isDefault ? DEFAULT_SHIFTS.find((d) => d.code === s.code) : undefined;
+    return def ? { ...s, label: localizeDefault(s.label, def.label) } : s;
+  });
+  for (const cal of calendars) if (cal.id === DEFAULT_CALENDAR.id) cal.name = localizeDefault(cal.name, DEFAULT_CALENDAR.name);
+
   const lastUsed = headMap.get(LAST_USED_SHIFT_KEY) ?? null;
   return {
     calendars,
@@ -209,14 +217,14 @@ export function useShiftData() {
   const lastUsedRef = useRef(lastUsedShift);
   const writeAlertShown = useRef(false);
 
-  const leaveTypes: LeaveType[] = DEFAULT_LEAVE_TYPES;
+  const leaveTypes: LeaveType[] = useMemo(() => localizedLeaveTypes(), []);
 
   const handleWriteError = useCallback((e: unknown) => {
     console.error('Storage write failed', e);
     setWriteError(true);
     if (!writeAlertShown.current) {
       writeAlertShown.current = true;
-      Alert.alert('Could not save', 'Your latest change could not be saved. Your device storage may be full.');
+      Alert.alert(tr('Could not save'), tr('Your latest change could not be saved. Your device storage may be full.'));
     }
   }, []);
 

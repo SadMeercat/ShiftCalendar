@@ -6,6 +6,7 @@ import { ThemeColors } from '../../constants/colors';
 import { PeriodStats } from '../../utils/statsCalculation';
 import { formatHours } from '../../utils/time';
 import { readableTextColor } from '../../utils/color';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   stats: PeriodStats;
@@ -25,17 +26,17 @@ export function MonthSummary({ stats, allShifts, leaveTypes, colors }: Props) {
       <View style={styles.totals}>
         <View style={styles.total}>
           <Text style={[styles.totalValue, { color: colors.text }]}>{stats.workingDays}</Text>
-          <Text style={[styles.totalLabel, { color: colors.textMuted }]}>Shifts</Text>
+          <Text style={[styles.totalLabel, { color: colors.textMuted }]}>{tr('Shifts')}</Text>
         </View>
         <View style={styles.total}>
           <Text style={[styles.totalValue, { color: colors.text }]}>{formatHours(stats.totalHours)}</Text>
-          <Text style={[styles.totalLabel, { color: colors.textMuted }]}>Hours</Text>
+          <Text style={[styles.totalLabel, { color: colors.textMuted }]}>{tr('Hours')}</Text>
         </View>
         <View style={styles.total}>
           <Text style={[styles.totalValue, { color: stats.overtimeHours > 0 ? colors.overtimeAccent : colors.text }]}>
             {formatHours(stats.overtimeHours)}
           </Text>
-          <Text style={[styles.totalLabel, { color: colors.textMuted }]}>Overtime</Text>
+          <Text style={[styles.totalLabel, { color: colors.textMuted }]}>{tr('Overtime')}</Text>
         </View>
       </View>
       {items.length > 0 && (

@@ -5,6 +5,7 @@ import { CalendarInfo } from '../../hooks/useShiftData';
 import { TimeFormat, formatHourOfDay, formatMinutesAsDuration } from '../../utils/time';
 import { Chip, SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { tr } from '../../utils/i18n';
 
 const REMINDER_HOURS = [17, 18, 19, 20, 21, 22, 23];
 const ALARM_LEADS = [15, 30, 45, 60, 90, 120];
@@ -38,12 +39,12 @@ export function NotificationsSection(props: Props) {
   const { colors } = props;
   return (
     <>
-      <SectionLabel colors={colors}>Reminders</SectionLabel>
+      <SectionLabel colors={colors}>{tr('Reminders')}</SectionLabel>
       <SettingsCard colors={colors}>
         <SettingsRow
           icon="bell-ring-outline"
-          title="Evening reminder"
-          subtitle="A heads-up the evening before each shift or leave day"
+          title={tr('Evening reminder')}
+          subtitle={tr('A heads-up the evening before each shift or leave day')}
           colors={colors}
           switchValue={props.remindersEnabled}
           onSwitch={props.onToggleReminders}
@@ -67,8 +68,8 @@ export function NotificationsSection(props: Props) {
         <SettingsRow
           icon="alarm"
           iconColor={colors.danger}
-          title="Pre-shift alarm"
-          subtitle="Loud alarm before your shift starts, even in Do Not Disturb"
+          title={tr('Pre-shift alarm')}
+          subtitle={tr('Loud alarm before your shift starts, even in Do Not Disturb')}
           colors={colors}
           switchValue={props.alarmEnabled}
           onSwitch={props.onToggleAlarm}
@@ -79,7 +80,7 @@ export function NotificationsSection(props: Props) {
               {ALARM_LEADS.map((m) => (
                 <Chip
                   key={m}
-                  label={`${formatMinutesAsDuration(m).replace(' hours', 'h').replace(' hour', 'h')} before`}
+                  label={tr('{time} before', { time: formatMinutesAsDuration(m).replace(' hours', 'h').replace(' hour', 'h').replace(' часа', ' ч').replace(' час', ' ч') })}
                   selected={props.alarmLead === m}
                   onPress={() => props.onAlarmLead(m)}
                   colors={colors}
@@ -92,7 +93,7 @@ export function NotificationsSection(props: Props) {
         )}
         {props.calendars.length > 1 && (props.remindersEnabled || props.alarmEnabled) && (
           <View style={styles.sub}>
-            <SettingsRow icon="calendar-account" title="Remind me about" subtitle="Also used by the home-screen widget" colors={colors} style={styles.subRow} />
+            <SettingsRow icon="calendar-account" title={tr('Remind me about')} subtitle={tr('Also used by the home-screen widget')} colors={colors} style={styles.subRow} />
             <ChipRow>
               {props.calendars.map((c) => (
                 <Chip key={c.id} label={c.name} color={c.color} selected={props.primaryCalendarId === c.id} onPress={() => props.onPrimaryCalendar(c.id)} colors={colors} compact />
@@ -101,7 +102,7 @@ export function NotificationsSection(props: Props) {
           </View>
         )}
         {(props.remindersEnabled || props.alarmEnabled) && (
-          <SettingsRow icon="send-outline" title="Send a test notification" subtitle="Arrives in about 5 seconds" colors={colors} onPress={props.onTest} />
+          <SettingsRow icon="send-outline" title={tr('Send a test notification')} subtitle={tr('Arrives in about 5 seconds')} colors={colors} onPress={props.onTest} />
         )}
       </SettingsCard>
     </>

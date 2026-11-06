@@ -1,3 +1,4 @@
+import { formatNumber, isRu, pl } from './i18n';
 export type TimeFormat = '24h' | '12h';
 
 export function parseHHMM(value: string): [number, number] | null {
@@ -57,12 +58,13 @@ export function formatHourOfDay(hour: number, format: TimeFormat): string {
 /** 8 → '8h', 7.5 → '7.5h', 7.25 → '7.25h'. */
 export function formatHours(hours: number): string {
   const rounded = Math.round(hours * 100) / 100;
-  return `${rounded}h`;
+  return isRu() ? `${formatNumber(rounded)} ч` : `${rounded}h`;
 }
 
 export function formatMinutesAsDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return isRu() ? `${minutes} мин` : `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
+  if (isRu()) return m ? `${h} ч ${m} мин` : pl(h, ['hour', 'hours'], ['час', 'часа', 'часов']);
   return m ? `${h}h ${m}m` : `${h} hour${h === 1 ? '' : 's'}`;
 }

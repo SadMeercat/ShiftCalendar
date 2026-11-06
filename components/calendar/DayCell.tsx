@@ -182,11 +182,15 @@ function DayCellBase(props: DayCellProps) {
           ) : null}
         </View>
 
-        {ruDay?.shortened && inMonth && (
-          <Text style={[styles.shortMark, { color: colors.warning }]} accessible={false}>
-            −1ч
-          </Text>
-        )}
+        {ruDay?.shortened && inMonth &&
+          (innerW >= 72 ? (
+            <Text style={[styles.shortMark, { color: colors.warning }]} accessible={false}>
+              −1ч
+            </Text>
+          ) : (
+            // В узкой ячейке надпись налезла бы на число — показываем точку.
+            <View style={[styles.shortDot, { backgroundColor: colors.warning }]} />
+          ))}
 
         {hasDots && (
           <View style={[styles.dots, innerW >= 70 && styles.dotsRow]}>
@@ -252,4 +256,5 @@ const styles = StyleSheet.create({
   dotsRow: { flexDirection: 'row', top: 8, right: 8, gap: 3 },
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   shortMark: { position: 'absolute', top: 5, left: 5, fontSize: 8, fontWeight: '800' },
+  shortDot: { position: 'absolute', top: 6, left: 6, width: 5, height: 5, borderRadius: 2.5 },
 });

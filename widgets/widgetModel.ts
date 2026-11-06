@@ -3,6 +3,7 @@ import { LeaveType } from '../constants/leaveTypes';
 import { readableTextColor } from '../utils/color';
 import { WeekStart, addDaysToKey, fromDateKey, toDateKey, weekDays, weekIndexOf } from '../utils/dates';
 import { TimeFormat, formatTimeRange, formatTime } from '../utils/time';
+import { isRu, tr } from '../utils/i18n';
 
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -54,7 +55,7 @@ export function buildWidgetModel(input: WidgetInput): WidgetModel {
     const info = describe(key);
     return {
       key,
-      letter: LETTERS[d.getDay()],
+      letter: isRu() ? tr(SHORT_DAYS[d.getDay()]) : LETTERS[d.getDay()],
       dayNum: String(d.getDate()),
       isToday: key === todayKey,
       code: info?.code ?? '',
@@ -63,22 +64,22 @@ export function buildWidgetModel(input: WidgetInput): WidgetModel {
     };
   });
 
-  let headline = 'Nothing scheduled today';
+  let headline = tr('Nothing scheduled today');
   let detail = '';
   const today = describe(todayKey);
   if (today) {
-    headline = `Today · ${today.label}`;
+    headline = `${tr('Today')} · ${today.label}`;
     detail = today.shift && isWorkingShift(today.shift)
       ? formatTimeRange(today.shift.startTime, today.shift.endTime, input.timeFormat)
-      : 'Day off';
+      : tr('Day off');
   }
   // Point to the next working shift so the widget always answers "when do I work next?"
   for (let i = 1; i <= 14; i++) {
     const key = addDaysToKey(todayKey, i);
     const info = describe(key);
     if (info?.shift && isWorkingShift(info.shift)) {
-      const when = i === 1 ? 'Tomorrow' : SHORT_DAYS[fromDateKey(key).getDay()];
-      const next = `Next: ${info.label} · ${when} ${formatTime(info.shift.startTime, input.timeFormat)}`;
+      const when = i === 1 ? tr('Tomorrow') : tr(SHORT_DAYS[fromDateKey(key).getDay()]);
+      const next = `${tr('Next:')} ${info.label} · ${when} ${formatTime(info.shift.startTime, input.timeFormat)}`;
       if (!today || !(today.shift && isWorkingShift(today.shift))) detail = detail ? `${detail} · ${next}` : next;
       break;
     }

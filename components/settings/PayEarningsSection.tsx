@@ -4,6 +4,7 @@ import { ThemeColors } from '../../constants/colors';
 import { getCurrency } from '../../constants/currencies';
 import { SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   colors: ThemeColors;
@@ -68,31 +69,31 @@ export function PayEarningsSection(props: Props) {
   const currency = getCurrency(props.currencyCode);
   return (
     <>
-      <SectionLabel colors={colors}>Pay</SectionLabel>
+      <SectionLabel colors={colors}>{tr('Pay')}</SectionLabel>
       <SettingsCard colors={colors}>
-        <SettingsRow icon="cash-multiple" iconColor={colors.success} title="Currency" value={`${currency.symbol} · ${currency.code}`} colors={colors} onPress={props.onCurrencyPress} />
+        <SettingsRow icon="cash-multiple" iconColor={colors.success} title={tr('Currency')} value={`${currency.symbol} · ${currency.code}`} colors={colors} onPress={props.onCurrencyPress} />
         <SettingsRow
           icon="briefcase-clock-outline"
-          title="Hourly rate"
-          subtitle="Used for pay estimates in Stats"
+          title={tr('Hourly rate')}
+          subtitle={tr('Used for pay estimates in Stats')}
           colors={colors}
-          right={<NumberField value={props.baseRate} onCommit={props.setBaseRate} colors={colors} prefix={currency.symbol} suffix="/h" max={1e6} label="Hourly rate" />}
+          right={<NumberField value={props.baseRate} onCommit={props.setBaseRate} colors={colors} prefix={currency.symbol} suffix={tr('/h')} max={1e6} label={tr('Hourly rate')} />}
         />
         <SettingsRow
           icon="clock-plus-outline"
           iconColor={colors.overtimeAccent}
-          title="Overtime rate"
-          subtitle="Per extra hour you log"
+          title={tr('Overtime rate')}
+          subtitle={tr('Per extra hour you log')}
           colors={colors}
-          right={<NumberField value={props.overtimeRate} onCommit={props.setOvertimeRate} colors={colors} prefix={currency.symbol} suffix="/h" max={1e6} label="Overtime rate" />}
+          right={<NumberField value={props.overtimeRate} onCommit={props.setOvertimeRate} colors={colors} prefix={currency.symbol} suffix={tr('/h')} max={1e6} label={tr('Overtime rate')} />}
         />
         <SettingsRow
           icon="umbrella-beach"
           iconColor={colors.success}
-          title="Paid leave day"
-          subtitle="Hours credited for each paid leave day"
+          title={tr('Paid leave day')}
+          subtitle={tr('Hours credited for each paid leave day')}
           colors={colors}
-          right={<NumberField value={props.paidLeaveHours} onCommit={props.setPaidLeaveHours} colors={colors} suffix="h" max={24} label="Hours per paid leave day" />}
+          right={<NumberField value={props.paidLeaveHours} onCommit={props.setPaidLeaveHours} colors={colors} suffix={tr('h')} max={24} label={tr('Hours per paid leave day')} />}
         />
       </SettingsCard>
     </>

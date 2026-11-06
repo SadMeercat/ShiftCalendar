@@ -1,7 +1,8 @@
 import { ShiftType, getShiftHours, isWorkingShift } from '../constants/shifts';
-import { LeaveType } from '../constants/leaveTypes';
+import { DEFAULT_LEAVE_TYPES, LeaveType } from '../constants/leaveTypes';
 import { encodeRow, parseCSV, unsanitizeCell } from './csv';
 import { eachDayKey, fromDateKey, isDateKey } from './dates';
+import { pl, tr } from './i18n';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const BOM = String.fromCharCode(0xfeff);
@@ -100,7 +101,8 @@ export function parseCSVContent(content: string, allShifts: ShiftType[], leaveTy
   const byCode = new Map(allShifts.map((s) => [s.code.toUpperCase(), s.code]));
   const byLabel = new Map(allShifts.map((s) => [s.label.trim().toLowerCase(), s.code]));
   const leaveLookup = new Map<string, string>();
-  for (const t of leaveTypes) {
+  // Английские названия и коды тоже узнаём: файл мог быть выгружен на другом языке.
+  for (const t of [...DEFAULT_LEAVE_TYPES, ...leaveTypes]) {
     leaveLookup.set(t.id.toLowerCase(), t.id);
     leaveLookup.set(t.code.toLowerCase(), t.id);
     leaveLookup.set(t.label.toLowerCase(), t.id);
@@ -154,16 +156,15 @@ export function parseCSVContent(content: string, allShifts: ShiftType[], leaveTy
 
 export function describeImport(result: ImportResult): string {
   const parts: string[] = [];
-  const n = (count: number, one: string, many = one + 's') => `${count} ${count === 1 ? one : many}`;
   const shiftCount = Object.keys(result.shifts).length;
   const leaveCount = Object.keys(result.leave).length;
   const noteCount = Object.keys(result.notes).length;
   const otCount = Object.keys(result.overtime).length;
-  if (shiftCount) parts.push(n(shiftCount, 'shift'));
-  if (leaveCount) parts.push(n(leaveCount, 'leave day'));
-  if (noteCount) parts.push(n(noteCount, 'note'));
-  if (otCount) parts.push(n(otCount, 'overtime entry', 'overtime entries'));
-  let text = `Found ${n(result.days, 'day')} with data${parts.length ? ` (${parts.join(', ')})` : ''}.`;
-  if (result.unknownCodes.length) text += `\n\nSkipped unknown shift codes: ${result.unknownCodes.join(', ')}.`;
+  if (shiftCount) parts.push(pl(shiftCount, ['shift', 'shifts'], ['смена', 'смены', 'смен']));
+  if (leaveCount) parts.push(pl(leaveCount, ['leave day', 'leave days'], ['день отпуска', 'дня отпуска', 'дней отпуска']));
+  if (noteCount) parts.push(pl(noteCount, ['note', 'notes'], ['заметка', 'заметки', 'заметок']));
+  if (otCount) parts.push(pl(otCount, ['overtime entry', 'overtime entries'], ['запись переработки', 'записи переработки', 'записей переработки']));
+  let text = `${tr('Found {days} with data', { days: pl(result.days, ['day', 'days'], ['день', 'дня', 'дней']) })}${parts.length ? ` (${parts.join(', ')})` : ''}.`;
+  if (result.unknownCodes.length) text += `\n\n${tr('Skipped unknown shift codes:')} ${result.unknownCodes.join(', ')}.`;
   return text;
 }

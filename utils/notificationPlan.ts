@@ -2,6 +2,7 @@ import { ShiftType, isWorkingShift, getShiftHours } from '../constants/shifts';
 import { LeaveType } from '../constants/leaveTypes';
 import { TimeFormat, formatTime, formatTimeRange, formatHours, formatMinutesAsDuration, parseHHMM } from './time';
 import { addDaysToKey, fromDateKey, toDateKey } from './dates';
+import { tr } from './i18n';
 
 export const HORIZON_DAYS = 14;
 
@@ -49,14 +50,14 @@ export function planNotifications(input: NotificationPlanInput): PlannedNotifica
         let title: string;
         let body: string;
         if (leave) {
-          title = `Tomorrow: ${leave.label}`;
-          body = 'Enjoy your time off.';
+          title = `${tr('Tomorrow:')} ${leave.label}`;
+          body = tr('Enjoy your time off.');
         } else if (shift && isWorkingShift(shift)) {
-          title = `Tomorrow: ${shift.label}`;
+          title = `${tr('Tomorrow:')} ${shift.label}`;
           body = `${formatTimeRange(shift.startTime, shift.endTime, input.timeFormat)} · ${formatHours(getShiftHours(shift))}`;
         } else {
-          title = `Tomorrow: ${shift!.label}`;
-          body = 'Day off — enjoy it!';
+          title = `${tr('Tomorrow:')} ${shift!.label}`;
+          body = tr('Day off — enjoy it!');
         }
         plan.push({ id: `sc-reminder-${dayKey}`, kind: 'reminder', trigger, dayKey, title, body });
       }
@@ -72,8 +73,8 @@ export function planNotifications(input: NotificationPlanInput): PlannedNotifica
           kind: 'alarm',
           trigger,
           dayKey,
-          title: `⏰ ${shift.label} in ${formatMinutesAsDuration(input.alarmLeadMinutes)}`,
-          body: `Your ${shift.label} shift starts at ${formatTime(shift.startTime, input.timeFormat)} — time to get ready!`,
+          title: `⏰ ${tr('{shift} in {time}', { shift: shift.label, time: formatMinutesAsDuration(input.alarmLeadMinutes) })}`,
+          body: tr('Your {shift} shift starts at {time} — time to get ready!', { shift: shift.label, time: formatTime(shift.startTime, input.timeFormat) }),
         });
       }
     }

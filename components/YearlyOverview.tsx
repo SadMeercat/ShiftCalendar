@@ -6,6 +6,7 @@ import { ThemeColors } from '../constants/colors';
 import { WeekStart, buildMonthGrid } from '../utils/dates';
 import { withAlpha } from '../utils/color';
 import { Tap } from './ui/Tap';
+import { monthName, tr } from '../utils/i18n';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -80,7 +81,7 @@ const MiniMonth = React.memo(function MiniMonth({
     <Tap
       onPress={() => onPress(month)}
       activeOpacity={0.7}
-      accessibilityLabel={`${MONTH_NAMES[month]} ${year}: ${assigned} days scheduled`}
+      accessibilityLabel={`${monthName(month)} ${year}: ${tr('{n} days scheduled', { n: assigned })}`}
       accessibilityState={{ selected: isSelected }}
       style={[
         styles.miniMonth,
@@ -91,7 +92,7 @@ const MiniMonth = React.memo(function MiniMonth({
         },
       ]}
     >
-      <Text style={[styles.monthName, { color: isSelected ? colors.primaryText : colors.textSecondary }]}>{MONTH_NAMES[month]}</Text>
+      <Text style={[styles.monthName, { color: isSelected ? colors.primaryText : colors.textSecondary }]}>{monthName(month, true)}</Text>
       <View style={styles.dotGrid}>{grid}</View>
     </Tap>
   );

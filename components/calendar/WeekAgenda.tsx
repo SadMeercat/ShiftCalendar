@@ -9,9 +9,9 @@ import { WeekStart, fromDateKey, weekDays } from '../../utils/dates';
 import { TimeFormat, formatHours, formatTimeRange } from '../../utils/time';
 import { readableTextColor, withAlpha } from '../../utils/color';
 import { Tap } from '../ui/Tap';
+import { formatDate as format, pl, tr } from '../../utils/i18n';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export interface WeekAgendaProps {
   weekIndex: number;
@@ -60,8 +60,8 @@ function WeekAgendaBase(props: WeekAgendaProps) {
 
     const meta: { icon: any; text: string; color: string }[] = [];
     if (working) meta.push({ icon: 'clock-outline', text: formatHours(hours), color: colors.textSecondary });
-    if (ot > 0) meta.push({ icon: 'clock-plus-outline', text: `+${formatHours(ot)} OT`, color: colors.overtimeAccent });
-    if (swap) meta.push({ icon: 'swap-horizontal', text: 'Swap offered', color: colors.swapAccent });
+    if (ot > 0) meta.push({ icon: 'clock-plus-outline', text: `+${formatHours(ot)} ${tr('OT')}`, color: colors.overtimeAccent });
+    if (swap) meta.push({ icon: 'swap-horizontal', text: tr('Swap offered'), color: colors.swapAccent });
 
     return (
       <Tap
@@ -70,11 +70,11 @@ function WeekAgendaBase(props: WeekAgendaProps) {
         onLongPress={() => props.onDayLongPress(key)}
         delayLongPress={350}
         activeOpacity={0.7}
-        accessibilityLabel={`${DAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}, ${item ? item.label : 'no shift'}${isToday ? ', today' : ''}${note ? ', note: ' + note : ''}`}
+        accessibilityLabel={`${format(date, 'EEEE d MMMM')}, ${item ? item.label : tr('no shift')}${isToday ? ', ' + tr('today') : ''}${note ? ', ' + tr('note:') + ' ' + note : ''}`}
         style={styles.row}
       >
         <View style={styles.dateCol}>
-          <Text style={[styles.dow, { color: isToday ? colors.primaryText : colors.textMuted }]}>{DAYS[date.getDay()]}</Text>
+          <Text style={[styles.dow, { color: isToday ? colors.primaryText : colors.textMuted }]}>{tr(DAYS[date.getDay()])}</Text>
           <View style={[styles.dayCircle, isToday && { backgroundColor: colors.primary }]}>
             <Text style={[styles.dayNum, { color: isToday ? colors.onPrimary : colors.text }]}>{date.getDate()}</Text>
           </View>
@@ -99,7 +99,7 @@ function WeekAgendaBase(props: WeekAgendaProps) {
                 </View>
               )}
               <Text style={[styles.title, { color: item ? colors.text : colors.textMuted }]} numberOfLines={1}>
-                {item ? item.label : preview === null ? 'Will be cleared' : 'No shift'}
+                {item ? item.label : preview === null ? tr('Will be cleared') : tr('No shift')}
               </Text>
               {working && shift ? (
                 <Text style={[styles.time, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -139,7 +139,7 @@ function WeekAgendaBase(props: WeekAgendaProps) {
     >
       <View style={styles.summary}>
         <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-          {worked} shift{worked === 1 ? '' : 's'} · {formatHours(Math.round(weekHours * 10) / 10)} this week
+          {pl(worked, ['shift', 'shifts'], ['смена', 'смены', 'смен'])} · {formatHours(Math.round(weekHours * 10) / 10)} {tr('this week')}
         </Text>
       </View>
       {rows}

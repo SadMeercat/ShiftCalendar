@@ -5,6 +5,7 @@ import { ThemeColors } from '../../constants/colors';
 import { withAlpha } from '../../utils/color';
 import { Tap } from '../ui/Tap';
 import { Chip } from '../ui/primitives';
+import { tr } from '../../utils/i18n';
 
 export type CalendarMode = 'normal' | 'paint' | 'repeat' | 'template';
 
@@ -20,10 +21,10 @@ interface ToolRowProps {
 export function ToolRow({ colors, onPaint, onRepeat, onTemplate, canRepeat }: ToolRowProps) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} style={styles.scroll}>
-      <Chip label="Paint" icon="brush-variant" onPress={onPaint} colors={colors} compact accessibilityLabel="Paint mode: tap days to assign shifts" />
-      <Chip label="Templates" icon="view-grid-plus-outline" onPress={onTemplate} colors={colors} compact accessibilityLabel="Apply a rotation template" />
+      <Chip label={tr('Paint')} icon="brush-variant" onPress={onPaint} colors={colors} compact accessibilityLabel={tr('Paint mode: tap days to assign shifts')} />
+      <Chip label={tr('Templates')} icon="view-grid-plus-outline" onPress={onTemplate} colors={colors} compact accessibilityLabel={tr('Apply a rotation template')} />
       {canRepeat && (
-        <Chip label="Repeat" icon="repeat" onPress={onRepeat} colors={colors} compact accessibilityLabel="Repeat a pattern of days" />
+        <Chip label={tr('Repeat')} icon="repeat" onPress={onRepeat} colors={colors} compact accessibilityLabel={tr('Repeat a pattern of days')} />
       )}
     </ScrollView>
   );
@@ -51,7 +52,7 @@ export function ModeBar({ colors, icon, text, doneLabel, onDone, onUndo, undoDis
         <Tap
           onPress={onUndo}
           disabled={undoDisabled}
-          accessibilityLabel="Undo last change"
+          accessibilityLabel={tr('Undo last change')}
           style={[styles.modeBtn, { backgroundColor: colors.surface, opacity: undoDisabled ? 0.4 : 1 }]}
         >
           <MaterialCommunityIcons name="undo-variant" size={18} color={colors.text} />

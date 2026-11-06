@@ -3,7 +3,7 @@ import { View, StyleSheet, useWindowDimensions, ScrollView, BackHandler, LayoutC
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import BottomSheet, { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { format } from 'date-fns';
+import { formatDate as format, tr } from '../../utils/i18n';
 import { useAppSettings } from '../../hooks/SettingsContext';
 import { useShifts } from '../../hooks/ShiftContext';
 import { useToday } from '../../hooks/useToday';
@@ -213,7 +213,7 @@ export default function CalendarScreen() {
     if (mode !== 'normal') return;
     const shift = lastUsedShift ? getShiftByCode(lastUsedShift) : undefined;
     if (!shift) {
-      showToast('Assign a shift once, then long-press any day to repeat it.', undefined, 'info');
+      showToast(tr('Assign a shift once, then long-press any day to repeat it.'), undefined, 'info');
       return;
     }
     const before = snapshotAssignments([key]);
@@ -434,8 +434,8 @@ export default function CalendarScreen() {
       <ModeBar
         colors={colors}
         icon="brush-variant"
-        text="Tap days to paint. Tap again to remove."
-        doneLabel="Done"
+        text={tr('Tap days to paint. Tap again to remove.')}
+        doneLabel={tr('Done')}
         onDone={exitMode}
         onUndo={undoPaint}
         undoDisabled={paintHistory.length === 0}
@@ -444,16 +444,16 @@ export default function CalendarScreen() {
       <ModeBar
         colors={colors}
         icon="repeat"
-        text={!patternStart ? 'Tap the first day of the pattern' : !patternEnd ? 'Now tap the last day' : 'Previewing · apply below or tap to restart'}
-        doneLabel="Cancel"
+        text={!patternStart ? tr('Tap the first day of the pattern') : !patternEnd ? tr('Now tap the last day') : tr('Previewing · apply below or tap to restart')}
+        doneLabel={tr('Cancel')}
         onDone={exitMode}
       />
     ) : mode === 'template' ? (
       <ModeBar
         colors={colors}
         icon="view-grid-plus-outline"
-        text={activeTemplate ? `Starts ${format(fromDateKey(templateStart), 'MMM d')} · tap a day to move` : 'Pick a rotation below'}
-        doneLabel="Cancel"
+        text={activeTemplate ? tr('Starts {date} · tap a day to move', { date: format(fromDateKey(templateStart), 'MMM d') }) : tr('Pick a rotation below')}
+        doneLabel={tr('Cancel')}
         onDone={exitMode}
       />
     ) : null;

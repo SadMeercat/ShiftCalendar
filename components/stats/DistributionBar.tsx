@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ThemeColors } from '../../constants/colors';
+import { tr } from '../../utils/i18n';
 
 export interface Segment {
   key: string;
@@ -24,7 +25,7 @@ export function DistributionBar({ segments, colors, unit }: { segments: Segment[
       <View
         style={[styles.bar, { backgroundColor: colors.surface }]}
         accessibilityRole="image"
-        accessibilityLabel={`Distribution: ${visible.map((s) => `${s.label} ${s.value} ${unit}`).join(', ')}`}
+        accessibilityLabel={`${tr('Distribution:')} ${visible.map((s) => `${s.label} ${s.value} ${unit}`).join(', ')}`}
       >
         {visible.map((s, i) => (
           <View

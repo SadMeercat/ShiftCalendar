@@ -3,9 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { ThemeColors } from '../../constants/colors';
 import { formatHours } from '../../utils/time';
 import { Tap } from '../ui/Tap';
+import { isRu, monthName, tr } from '../../utils/i18n';
 
-const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTHS = () => (isRu() ? ['Я', 'Ф', 'М', 'А', 'М', 'И', 'И', 'А', 'С', 'О', 'Н', 'Д'] : ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']);
 const PLOT_HEIGHT = 120;
 
 interface Props {
@@ -31,10 +31,10 @@ export function MonthlyHoursChart({ hours, colors, highlightMonth, onMonthPress 
         {shown >= 0 && hours[shown] > 0 ? (
           <Text style={[styles.readoutText, { color: colors.textSecondary }]}>
             <Text style={{ color: colors.text, fontWeight: '800' }}>{formatHours(hours[shown])}</Text>
-            {`  in ${MONTH_NAMES[shown]}${shown === peak && selected === null ? ' · busiest month' : ''}`}
+            {`  ${tr('in {month}', { month: monthName(shown, false, !isRu()) })}${shown === peak && selected === null ? ' · ' + tr('busiest month') : ''}`}
           </Text>
         ) : (
-          <Text style={[styles.readoutText, { color: colors.textMuted }]}>No hours logged this year yet</Text>
+          <Text style={[styles.readoutText, { color: colors.textMuted }]}>{tr('No hours logged this year yet')}</Text>
         )}
       </View>
       <View style={[styles.plot, { height: PLOT_HEIGHT }]}>
@@ -46,8 +46,8 @@ export function MonthlyHoursChart({ hours, colors, highlightMonth, onMonthPress 
               key={i}
               onPress={() => setSelected(i)}
               onLongPress={() => onMonthPress(i)}
-              accessibilityLabel={`${MONTH_NAMES[i]}: ${formatHours(h)}`}
-              accessibilityHint="Long-press to open this month"
+              accessibilityLabel={`${monthName(i)}: ${formatHours(h)}`}
+              accessibilityHint={tr('Long-press to open this month')}
               activeOpacity={0.8}
               style={styles.slot}
             >
@@ -67,7 +67,7 @@ export function MonthlyHoursChart({ hours, colors, highlightMonth, onMonthPress 
       </View>
       <View style={[styles.baseline, { backgroundColor: colors.border }]} />
       <View style={styles.axis}>
-        {MONTHS.map((m, i) => (
+        {MONTHS().map((m, i) => (
           <Text key={i} style={[styles.axisLabel, { color: i === shown ? colors.text : colors.textMuted }]}>
             {m}
           </Text>

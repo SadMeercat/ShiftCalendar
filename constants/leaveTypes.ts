@@ -1,3 +1,4 @@
+import { tr } from '../utils/i18n';
 export interface LeaveType {
   id: string;
   code: string;       // short code for calendar pill (e.g. "AL", "SL")
@@ -14,6 +15,11 @@ export const DEFAULT_LEAVE_TYPES: LeaveType[] = [
   { id: 'emergency', code: 'EL', label: 'Emergency Leave', color: '#F97316', icon: 'alert-circle-outline', paid: true,  defaultDays: 5  },
   { id: 'unpaid',    code: 'UL', label: 'Unpaid Leave',    color: '#EC4899', icon: 'cash-off',             paid: false, defaultDays: 0  },
 ];
+
+/** Виды отпуска с названиями и кодами на языке приложения (id не меняются). */
+export function localizedLeaveTypes(): LeaveType[] {
+  return DEFAULT_LEAVE_TYPES.map((t) => ({ ...t, label: tr(t.label), code: tr(t.code) }));
+}
 
 /** Default hours credited per paid leave day (configurable in Settings → Pay). */
 export const STANDARD_WORK_HOURS = 8;

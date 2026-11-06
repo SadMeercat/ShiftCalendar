@@ -5,6 +5,7 @@ import { ThemeColors } from '../constants/colors';
 import { haptic } from '../utils/haptics';
 import { readableTextColor, withAlpha } from '../utils/color';
 import { Tap } from './ui/Tap';
+import { tr } from '../utils/i18n';
 
 interface Props {
   calendars: CalendarInfo[];
@@ -29,7 +30,7 @@ export const CalendarSwitcher = React.memo(function CalendarSwitcher({ calendars
               haptic.selection();
               onSwitch(cal.id);
             }}
-            accessibilityLabel={`${cal.name} calendar`}
+            accessibilityLabel={tr('{name} calendar', { name: cal.name })}
             accessibilityState={{ selected: active }}
             style={[
               styles.chip,

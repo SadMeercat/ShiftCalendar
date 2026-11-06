@@ -12,6 +12,7 @@ import {
   describeBackup,
   restoreBackup,
 } from '../utils/exportImport';
+import { tr } from '../utils/i18n';
 
 /** Handles CSV and backup files opened with the app from a file manager or another app. */
 export function useDeepLinkHandler() {
@@ -36,7 +37,7 @@ export function useDeepLinkHandler() {
         content = await readAsStringAsync(readableUri);
       } catch (e) {
         console.error('Failed to read incoming file:', e);
-        Alert.alert('Could not open file', 'The file could not be read. It may be in an unsupported format.');
+        Alert.alert(tr('Could not open file'), tr('The file could not be read. It may be in an unsupported format.'));
         return;
       }
 
@@ -44,46 +45,46 @@ export function useDeepLinkHandler() {
       if (trimmed.startsWith('{')) {
         try {
           const summary = inspectBackup(trimmed);
-          Alert.alert('Restore backup?', describeBackup(summary), [
-            { text: 'Cancel', style: 'cancel' },
+          Alert.alert(tr('Restore backup?'), describeBackup(summary), [
+            { text: tr('Cancel'), style: 'cancel' },
             {
-              text: 'Restore',
+              text: tr('Restore'),
               style: 'destructive',
               onPress: async () => {
                 try {
                   await restoreBackup(summary);
                   await Promise.all([reload(), reloadSettings()]);
                   haptic.success();
-                  Alert.alert('Backup restored', 'Your calendars and settings are back.');
+                  Alert.alert(tr('Backup restored'), tr('Your calendars and settings are back.'));
                 } catch (e: any) {
-                  Alert.alert('Restore failed', e?.message || 'The backup could not be restored.');
+                  Alert.alert(tr('Restore failed'), e?.message || tr('The backup could not be restored.'));
                 }
               },
             },
           ]);
         } catch (e: any) {
-          Alert.alert('Unrecognized file', e?.message || 'This file is not a ShiftCalendar backup.');
+          Alert.alert(tr('Unrecognized file'), e?.message || tr('This file is not a ShiftCalendar backup.'));
         }
         return;
       }
 
       const result = parseCSVContent(content, allShifts, leaveTypes);
       if (result && result.days > 0) {
-        Alert.alert('Import CSV?', `${describeImport(result)}\n\nImport into "${activeCalendar.name}"? Matching dates are replaced.`, [
-          { text: 'Cancel', style: 'cancel' },
+        Alert.alert(tr('Import CSV?'), `${describeImport(result)}\n\n${tr('Import into “{name}”? Matching dates are replaced.', { name: activeCalendar.name })}`, [
+          { text: tr('Cancel'), style: 'cancel' },
           {
-            text: 'Import',
+            text: tr('Import'),
             onPress: () => {
               importDays(result);
               haptic.success();
-              Alert.alert('Import complete', `Imported ${result.days} days into "${activeCalendar.name}".`);
+              Alert.alert(tr('Import complete'), tr('Imported {n} days into “{name}”.', { n: result.days, name: activeCalendar.name }));
             },
           },
         ]);
         return;
       }
 
-      Alert.alert('Unrecognized file', 'This file does not look like a ShiftCalendar CSV export or backup.');
+      Alert.alert(tr('Unrecognized file'), tr('This file does not look like a ShiftCalendar CSV export or backup.'));
     },
     [allShifts, leaveTypes, importDays, activeCalendar.name, reload, reloadSettings]
   );

@@ -7,6 +7,7 @@ import { haptic } from '../../utils/haptics';
 import { Tap } from '../ui/Tap';
 import { SectionLabel } from '../ui/primitives';
 import { SettingsCard, SettingsRow } from './SettingsRow';
+import { tr } from '../../utils/i18n';
 
 interface Props {
   colors: ThemeColors;
@@ -25,7 +26,7 @@ function DaysStepper({ value, onChange, colors, label }: { value: number; onChan
   };
   return (
     <View style={[styles.stepper, { backgroundColor: colors.surfaceVariant }]}>
-      <Tap onPress={() => step(-1)} disabled={value <= 0} accessibilityLabel={`Fewer ${label} days`} style={[styles.stepBtn, { opacity: value <= 0 ? 0.35 : 1 }]}>
+      <Tap onPress={() => step(-1)} disabled={value <= 0} accessibilityLabel={tr('Fewer {label} days', { label })} style={[styles.stepBtn, { opacity: value <= 0 ? 0.35 : 1 }]}>
         <MaterialCommunityIcons name="minus" size={16} color={colors.text} />
       </Tap>
       <TextInput
@@ -37,10 +38,10 @@ function DaysStepper({ value, onChange, colors, label }: { value: number; onChan
         }}
         onBlur={() => setText(String(value))}
         keyboardType="number-pad"
-        accessibilityLabel={`${label} days per year`}
+        accessibilityLabel={tr('{label} days per year', { label })}
         style={[styles.stepValue, { color: colors.text }]}
       />
-      <Tap onPress={() => step(1)} accessibilityLabel={`More ${label} days`} style={styles.stepBtn}>
+      <Tap onPress={() => step(1)} accessibilityLabel={tr('More {label} days', { label })} style={styles.stepBtn}>
         <MaterialCommunityIcons name="plus" size={16} color={colors.text} />
       </Tap>
     </View>
@@ -50,7 +51,7 @@ function DaysStepper({ value, onChange, colors, label }: { value: number; onChan
 export function LeaveBalanceSection({ colors, calendarName, leaveTypes, leaveBalances, setLeaveBalance }: Props) {
   return (
     <>
-      <SectionLabel colors={colors}>{`Leave allowance · ${calendarName}`}</SectionLabel>
+      <SectionLabel colors={colors}>{`${tr('Leave allowance')} · ${calendarName}`}</SectionLabel>
       <SettingsCard colors={colors}>
         {leaveTypes.map((lt) => (
           <SettingsRow
@@ -58,13 +59,13 @@ export function LeaveBalanceSection({ colors, calendarName, leaveTypes, leaveBal
             icon={lt.icon as any}
             iconColor={lt.color}
             title={lt.label}
-            subtitle={lt.paid ? 'Paid · days per year' : 'Unpaid · days per year'}
+            subtitle={lt.paid ? tr('Paid · days per year') : tr('Unpaid · days per year')}
             colors={colors}
             right={<DaysStepper value={leaveBalances[lt.id] ?? lt.defaultDays} onChange={(v) => setLeaveBalance(lt.id, v)} colors={colors} label={lt.label} />}
           />
         ))}
       </SettingsCard>
-      <Text style={[styles.footnote, { color: colors.textMuted }]}>Remaining days for the current year are shown in Stats.</Text>
+      <Text style={[styles.footnote, { color: colors.textMuted }]}>{tr('Remaining days for the current year are shown in Stats.')}</Text>
     </>
   );
 }

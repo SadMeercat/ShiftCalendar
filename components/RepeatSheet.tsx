@@ -2,7 +2,6 @@ import React, { forwardRef, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import { useShifts } from '../hooks/ShiftContext';
 import { useAppSettings } from '../hooks/SettingsContext';
 import { ShiftType } from '../constants/shifts';
@@ -11,6 +10,7 @@ import { addDaysToKey, eachDayKey, fromDateKey } from '../utils/dates';
 import { readableTextColor, withAlpha } from '../utils/color';
 import { Chip, SectionLabel } from './ui/primitives';
 import { SheetActionBar, SheetHeader, useSheetChrome } from './ui/sheet';
+import { formatDate as format, pl, tr } from '../utils/i18n';
 
 interface Props {
   /** Only the active quick-fill sheet publishes a calendar preview. */
@@ -27,8 +27,8 @@ interface Props {
 export const QUICK_FILL_COLLAPSED = 190;
 
 export function durationLabel(option: DurationOption, startKey: string) {
-  if (option === 'month') return `Until ${format(fromDateKey(durationEndKey(startKey, 'month')), 'MMM d')}`;
-  return option === '3m' ? '3 months' : option === '6m' ? '6 months' : '1 year';
+  if (option === 'month') return tr('Until {date}', { date: format(fromDateKey(durationEndKey(startKey, 'month')), 'MMM d') });
+  return option === '3m' ? tr('3 months') : option === '6m' ? tr('6 months') : tr('1 year');
 }
 
 export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
@@ -76,13 +76,13 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
 
   const step = !patternStart ? 1 : !patternEnd ? 2 : 3;
   const hint =
-    step === 1 ? 'Tap the first day of your pattern on the calendar.' : step === 2 ? 'Now tap the last day of the pattern.' : null;
+    step === 1 ? tr('Tap the first day of your pattern on the calendar.') : step === 2 ? tr('Now tap the last day of the pattern.') : null;
   const changed = plan ? Object.keys(plan.entries).filter((k) => (shiftData[k] ?? null) !== plan.entries[k]).length : 0;
 
   const apply = () => {
     if (!plan || !repeatFrom) return;
     const range = `${format(fromDateKey(repeatFrom), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d, yyyy')}`;
-    onApply(plan.entries, `Pattern repeated · ${range}`);
+    onApply(plan.entries, `${tr('Pattern repeated')} · ${range}`);
   };
 
   return (
@@ -96,17 +96,17 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
       {...chrome}
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <SheetHeader title="Repeat pattern" subtitle={hint ?? undefined} colors={colors} onClose={onClose} />
+        <SheetHeader title={tr('Repeat pattern')} subtitle={hint ?? undefined} colors={colors} onClose={onClose} />
         {!hint && (
           <SheetActionBar
             summary={
               shiftCount === 0
-                ? 'Those days have no shifts to repeat yet.'
+                ? tr('Those days have no shifts to repeat yet.')
                 : plan && repeatFrom
-                  ? `${format(fromDateKey(repeatFrom), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d')}\n${pattern.length}-day pattern · ${changed} change${changed === 1 ? '' : 's'}`
-                  : 'Pick a longer period below.'
+                  ? `${format(fromDateKey(repeatFrom), 'MMM d')} – ${format(fromDateKey(plan.endKey), 'MMM d')}\n${tr('{n}-day pattern', { n: pattern.length })} · ${pl(changed, ['change', 'changes'], ['изменение', 'изменения', 'изменений'])}`
+                  : tr('Pick a longer period below.')
             }
-            actionLabel="Apply"
+            actionLabel={tr('Apply')}
             onAction={apply}
             onOptions={() => {
               if (ref && typeof ref !== 'function') ref.current?.snapToIndex(1);
@@ -118,8 +118,8 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
 
         <View style={styles.rangeRow}>
           {[
-            { label: 'From', value: patternStart },
-            { label: 'To', value: patternEnd },
+            { label: tr('From'), value: patternStart },
+            { label: tr('To'), value: patternEnd },
           ].map((r, i) => (
             <React.Fragment key={r.label}>
               {i === 1 && <MaterialCommunityIcons name="arrow-right" size={18} color={colors.textMuted} />}
@@ -134,7 +134,7 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
               >
                 <Text style={[styles.rangeLabel, { color: colors.textMuted }]}>{r.label}</Text>
                 <Text style={[styles.rangeValue, { color: r.value ? colors.text : colors.textMuted }]}>
-                  {r.value ? format(fromDateKey(r.value), 'EEE, MMM d') : 'Tap a day'}
+                  {r.value ? format(fromDateKey(r.value), 'EEE, MMM d') : tr('Tap a day')}
                 </Text>
               </View>
             </React.Fragment>
@@ -143,8 +143,8 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
 
         {pattern.length > 0 && (
           <>
-            <SectionLabel colors={colors} right={patternStart ? <Chip label="Reset" icon="close" compact onPress={onReset} colors={colors} /> : undefined}>
-              {`${pattern.length}-day pattern · ${shiftCount} shift${shiftCount === 1 ? '' : 's'}`}
+            <SectionLabel colors={colors} right={patternStart ? <Chip label={tr('Reset')} icon="close" compact onPress={onReset} colors={colors} /> : undefined}>
+              {`${tr('{n}-day pattern', { n: pattern.length })} · ${pl(shiftCount, ['shift', 'shifts'], ['смена', 'смены', 'смен'])}`}
             </SectionLabel>
             <View style={styles.patternGrid}>
               {pattern.map((d) => (
@@ -162,7 +162,7 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
               <View style={[styles.warn, { backgroundColor: withAlpha(colors.warning, 0.12) }]}>
                 <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.warning} />
                 <Text style={[styles.warnText, { color: colors.warning }]}>
-                  These days have no shifts yet. Assign shifts to them first, then repeat.
+                  {tr('These days have no shifts yet. Assign shifts to them first, then repeat.')}
                 </Text>
               </View>
             )}
@@ -171,7 +171,7 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
 
         {repeatFrom && shiftCount > 0 && (
           <>
-            <SectionLabel colors={colors}>Repeat for</SectionLabel>
+            <SectionLabel colors={colors}>{tr('Repeat for')}</SectionLabel>
             <View style={styles.chips}>
               {DURATION_OPTIONS.map((opt) => (
                 <Chip key={opt} label={durationLabel(opt, repeatFrom)} selected={duration === opt} onPress={() => setDuration(opt)} colors={colors} />
@@ -179,8 +179,8 @@ export const RepeatSheet = forwardRef<BottomSheet, Props>(function RepeatSheet(
             </View>
             <Text style={[styles.summary, { color: colors.textSecondary }]}>
               {plan
-                ? `Repeats until ${format(fromDateKey(plan.endKey), 'MMM d, yyyy')}.${plan.keptLeave ? ` ${plan.keptLeave} leave day${plan.keptLeave === 1 ? '' : 's'} stay as they are.` : ''} Blank days in the pattern clear shifts.`
-                : 'The pattern already reaches the end of this period — pick a longer one.'}
+                ? `${tr('Repeats until {date}.', { date: format(fromDateKey(plan.endKey), 'MMM d, yyyy') })}${plan.keptLeave ? ' ' + tr('Leave days kept as they are: {n}.', { n: plan.keptLeave }) : ''} ${tr('Blank days in the pattern clear shifts.')}`
+                : tr('The pattern already reaches the end of this period — pick a longer one.')}
             </Text>
           </>
         )}
