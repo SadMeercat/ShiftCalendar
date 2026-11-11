@@ -9,6 +9,7 @@ import { TimeFormat } from '../utils/time';
 import { setHapticsEnabled } from '../utils/haptics';
 import { runMigrations } from '../utils/migrations';
 import { LanguageSetting, setLanguage } from '../utils/i18n';
+import type { AdvanceMode } from '../utils/ruWorkTime';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -39,6 +40,16 @@ export interface Settings {
   bonusPercent: number;
   /** Праздники и переработка оплачиваются с учётом премии. */
   bonusInExtras: boolean;
+  /** Профсоюзные взносы, % от начисленного (0 — нет). */
+  unionPercent: number;
+  /** Как считается аванс. */
+  advanceMode: AdvanceMode;
+  /** % от оклада или сумма аванса — в зависимости от advanceMode. */
+  advanceValue: number;
+  advanceMinusNdfl: boolean;
+  /** Дни выплаты: аванс в текущем месяце, зарплата — в следующем. */
+  advanceDay: number;
+  salaryDay: number;
   /** Язык интерфейса: системный, русский или английский. */
   language: LanguageSetting;
 }
@@ -65,6 +76,12 @@ export const DEFAULT_SETTINGS: Settings = {
   ndflPercent: 13,
   bonusPercent: 0,
   bonusInExtras: true,
+  unionPercent: 1,
+  advanceMode: 'norm',
+  advanceValue: 0,
+  advanceMinusNdfl: true,
+  advanceDay: 25,
+  salaryDay: 10,
   language: 'system',
 };
 
@@ -91,6 +108,12 @@ export const SETTINGS_KEYS: Record<keyof Settings, string> = {
   ndflPercent: 'ru_ndfl_percent',
   bonusPercent: 'ru_bonus_percent',
   bonusInExtras: 'ru_bonus_in_extras',
+  unionPercent: 'ru_union_percent',
+  advanceMode: 'ru_advance_mode',
+  advanceValue: 'ru_advance_value',
+  advanceMinusNdfl: 'ru_advance_minus_ndfl',
+  advanceDay: 'ru_advance_day',
+  salaryDay: 'ru_salary_day',
   language: 'app_language',
 };
 
@@ -139,6 +162,17 @@ function parseSettings(raw: Map<string, string | null>): Settings {
   const bonus = get('bonusPercent');
   if (bonus) s.bonusPercent = parseNumber(bonus, 0, 1000, 0);
   s.bonusInExtras = get('bonusInExtras') !== 'false';
+  const union = get('unionPercent');
+  if (union) s.unionPercent = parseNumber(union, 0, 20, 1);
+  const advMode = get('advanceMode');
+  if (advMode === 'worked' || advMode === 'norm' || advMode === 'percent' || advMode === 'fixed') s.advanceMode = advMode;
+  const advValue = get('advanceValue');
+  if (advValue) s.advanceValue = parseNumber(advValue, 0, 1e8, 0);
+  s.advanceMinusNdfl = get('advanceMinusNdfl') !== 'false';
+  const advDay = get('advanceDay');
+  if (advDay) s.advanceDay = Math.round(parseNumber(advDay, 1, 31, 25));
+  const salDay = get('salaryDay');
+  if (salDay) s.salaryDay = Math.round(parseNumber(salDay, 1, 31, 10));
   const lang = get('language');
   if (lang === 'ru' || lang === 'en' || lang === 'system') s.language = lang;
   return s;

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ThemeColors } from '../../constants/colors';
 import { formatMoney, getCurrency } from '../../constants/currencies';
-import { RuPayBreakdown, RuWorkStats } from '../../utils/ruWorkTime';
+import { PaidParts, RuPayBreakdown, RuWorkStats, paidTotal } from '../../utils/ruWorkTime';
 import { formatHoursRu } from '../../utils/ruFormat';
 import { Button, Card, Divider, SectionLabel } from '../ui/primitives';
 import { NumberField } from '../settings/PayEarningsSection';
@@ -30,19 +30,41 @@ interface Props {
   estimate: RuPayBreakdown | null;
   /** Обратный расчёт из полученной суммы. */
   fromReceived: RuPayBreakdown | null;
-  received: number;
-  /** Задан только для месяца: поле ввода полученной суммы. */
-  onReceivedChange?: (amount: number) => void;
+  /** Что пришло по расчётному листку (за год — сумма по месяцам, где вписано). */
+  paid?: PaidParts;
+  /** Задан только для месяца: поля ввода частей выплаты. */
+  onPartChange?: (part: keyof PaidParts, amount: number) => void;
+  /** Аванс по прогнозу (за год — сумма). */
+  forecastAdvance: number;
+  /** Даты выплат (только для месяца). */
+  payDates?: { advance: string; salary: string };
+  /** Процент профвзносов из настроек: по нему видно, от какой суммы взяты взносы. */
+  unionPercent?: number;
   /** Текущий процент премии для прогноза и сохранение нового. */
   bonusPercent?: number;
   onRememberBonus?: (percent: number) => void;
 }
 
-function pct(n: number) {
-  return `${String(Math.round(n * 10) / 10).replace('.', ',')}%`;
+function pct(n: number, digits = 1) {
+  const f = 10 ** digits;
+  return `${String(Math.round(n * f) / f).replace('.', ',')}%`;
 }
 
-function PayRows({ pay, colors, currencyCode, ndflPercent, work }: { pay: RuPayBreakdown; colors: ThemeColors; currencyCode: string; ndflPercent: number; work: RuWorkStats }) {
+/**
+ * Откуда взялись взносы. Если в листке они меньше процента от всего начисленного, значит часть
+ * начислений (больничные, отпускные, компенсации) в базу взносов не входит — показываем базу.
+ */
+function unionInfo(pay: RuPayBreakdown, unionPercent: number, m: (n: number) => string): string | undefined {
+  if (!(unionPercent > 0)) return undefined;
+  const base = pay.union / (unionPercent / 100);
+  const outside = pay.gross - base;
+  if (Math.abs(outside) < 1) return 'От всего начисленного';
+  return outside > 0
+    ? `От ${m(base)} — ещё ${m(outside)} начислено без взносов (больничные, отпускные, компенсации…)`
+    : `От ${m(base)} — больше начисленного, проверьте процент`;
+}
+
+function PayRows({ pay, colors, currencyCode, ndflPercent, work, unionPercent = 0 }: { pay: RuPayBreakdown; colors: ThemeColors; currencyCode: string; ndflPercent: number; work: RuWorkStats; unionPercent?: number }) {
   const m = (n: number) => formatMoney(n, currencyCode);
   const hasBase = pay.rateSource === 'salary' || pay.rateSource === 'hourly';
   const withBonus = pay.extrasRate !== pay.rate;
@@ -95,13 +117,24 @@ function PayRows({ pay, colors, currencyCode, ndflPercent, work }: { pay: RuPayB
       <Divider colors={colors} />
       <Row label={`НДФЛ ${String(ndflPercent).replace('.', ',')}%`} value={`−${m(pay.ndfl)}`} colors={colors} />
       <Divider colors={colors} />
+      {pay.union > 0 && (
+        <>
+          <Row
+            label={unionPercent > 0 ? `Профсоюзные взносы ${pct(unionPercent, 2)}` : 'Профсоюзные взносы'}
+            note={unionInfo(pay, unionPercent, m)}
+            value={`−${m(pay.union)}`}
+            colors={colors}
+          />
+          <Divider colors={colors} />
+        </>
+      )}
       <Row label="На руки" value={m(pay.net)} colors={colors} strong />
     </>
   );
 }
 
 export function RuWorkCard(props: Props) {
-  const { work, colors, currencyCode, estimate, fromReceived, received, ndflPercent } = props;
+  const { work, colors, currencyCode, estimate, fromReceived, paid, ndflPercent } = props;
   const diff = work.overtimeHours > 0 ? work.overtimeHours : -work.shortfallHours;
   const currency = getCurrency(currencyCode);
 
@@ -147,65 +180,153 @@ export function RuWorkCard(props: Props) {
         />
       </Card>
 
-      <SectionLabel colors={colors}>{`Зарплата · ${props.title}`}</SectionLabel>
-      <Card colors={colors}>
-        {props.onReceivedChange ? (
-          <View style={styles.row}>
-            <View style={styles.flex}>
-              <Text style={[styles.label, styles.strong, { color: colors.text }]}>Получено на руки</Text>
-              <Text style={[styles.note, { color: colors.textMuted }]}>Впишите сумму — разложим её на оклад, премию и доплаты</Text>
-            </View>
-            <NumberField value={received} onCommit={props.onReceivedChange} colors={colors} prefix={currency.symbol} suffix="" max={1e8} label="Получено за месяц" />
-          </View>
-        ) : (
-          <Row label="Получено на руки" note="Сумма по месяцам, где вписано" value={formatMoney(received, currencyCode)} colors={colors} strong />
-        )}
+      <PayoutsCard {...props} />
 
-        {fromReceived && (
-          <>
+      {props.onPartChange && (
+        <>
+          <SectionLabel colors={colors}>{`Расчётный листок · ${props.title}`}</SectionLabel>
+          <Card colors={colors}>
+            <Text style={[styles.hint, { color: colors.textMuted }]}>
+              Впишите, что пришло. Начисленное, премия и доплаты посчитаются сами: начислено = (аванс + зарплата + взносы) ÷ (1 − НДФЛ).
+            </Text>
+            <PartField label="Аванс" note="Сколько пришло авансом" value={paid?.advance ?? 0} onChange={(v) => props.onPartChange!('advance', v)} colors={colors} symbol={currency.symbol} />
             <Divider colors={colors} />
-            <Text style={[styles.subhead, { color: colors.textMuted }]}>РАСЧЁТ ИЗ ПОЛУЧЕННОЙ СУММЫ</Text>
-            <PayRows pay={fromReceived} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} />
-            {props.onRememberBonus && fromReceived.rateSource !== 'received' && fromReceived.bonusPercent > 0 && fromReceived.bonusPercent !== props.bonusPercent && (
-              <Button
-                label={`Запомнить премию ${pct(fromReceived.bonusPercent)} для прогноза`}
-                icon="content-save-outline"
-                variant="secondary"
-                onPress={() => props.onRememberBonus!(fromReceived.bonusPercent)}
-                colors={colors}
-                style={styles.remember}
-              />
-            )}
-          </>
-        )}
+            <PartField label="Зарплата" note="Окончательный расчёт за месяц" value={paid?.salary ?? 0} onChange={(v) => props.onPartChange!('salary', v)} colors={colors} symbol={currency.symbol} />
+            <Divider colors={colors} />
+            <PartField
+              label="Профсоюзные взносы"
+              note={props.unionPercent ? `Из листка. Пусто — ${pct(props.unionPercent, 2)} от начисленного` : 'Из листка, если удерживают'}
+              value={paid?.union ?? 0}
+              onChange={(v) => props.onPartChange!('union', v)}
+              colors={colors}
+              symbol={currency.symbol}
+            />
 
-        {estimate && (
-          <>
-            <Divider colors={colors} />
-            <Text style={[styles.subhead, { color: colors.textMuted }]}>ПРОГНОЗ ПО ОКЛАДУ И ПРЕМИИ ИЗ НАСТРОЕК</Text>
-            <PayRows pay={estimate} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} />
-            {received > 0 && props.onReceivedChange && (
+            {fromReceived && (
               <>
                 <Divider colors={colors} />
-                <Row
-                  label="Разница с полученным"
-                  note={received >= estimate.net ? 'Получено не меньше расчёта' : 'Получено меньше расчёта'}
-                  value={`${received - estimate.net >= 0 ? '+' : '−'}${formatMoney(Math.abs(received - estimate.net), currencyCode)}`}
-                  colors={colors}
-                  accent={received - estimate.net < -0.5 ? colors.danger : colors.success}
-                />
+                <Text style={[styles.subhead, { color: colors.textMuted }]}>РАЗБОР ПОЛУЧЕННОГО</Text>
+                <PayRows pay={fromReceived} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} unionPercent={props.unionPercent} />
+                {props.onRememberBonus && fromReceived.rateSource !== 'received' && fromReceived.bonusPercent > 0 && fromReceived.bonusPercent !== props.bonusPercent && (
+                  <Button
+                    label={`Запомнить премию ${pct(fromReceived.bonusPercent)} для прогноза`}
+                    icon="content-save-outline"
+                    variant="secondary"
+                    onPress={() => props.onRememberBonus!(fromReceived.bonusPercent)}
+                    colors={colors}
+                    style={styles.remember}
+                  />
+                )}
               </>
             )}
-          </>
-        )}
+          </Card>
+        </>
+      )}
 
-        {!estimate && !fromReceived && (
+      {!props.onPartChange && fromReceived && (
+        <>
+          <SectionLabel colors={colors}>{`Разбор полученного · ${props.title}`}</SectionLabel>
+          <Card colors={colors}>
+            <PayRows pay={fromReceived} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} unionPercent={props.unionPercent} />
+          </Card>
+        </>
+      )}
+
+      {estimate && (
+        <>
+          <SectionLabel colors={colors}>{`Прогноз по окладу · ${props.title}`}</SectionLabel>
+          <Card colors={colors}>
+            <PayRows pay={estimate} colors={colors} currencyCode={currencyCode} ndflPercent={ndflPercent} work={work} unionPercent={props.unionPercent} />
+          </Card>
+        </>
+      )}
+    </>
+  );
+}
+
+function PartField({ label, note, value, onChange, colors, symbol }: { label: string; note: string; value: number; onChange: (v: number) => void; colors: ThemeColors; symbol: string }) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.flex}>
+        <Text style={[styles.label, styles.strong, { color: colors.text }]}>{label}</Text>
+        <Text style={[styles.note, { color: colors.textMuted }]}>{note}</Text>
+      </View>
+      <NumberField value={value} onCommit={onChange} colors={colors} prefix={symbol} suffix="" max={1e8} label={label} />
+    </View>
+  );
+}
+
+/** Сколько придёт авансом и зарплатой: прогноз и, если вписано, факт. */
+function PayoutsCard(props: Props) {
+  const { colors, currencyCode, estimate, paid, forecastAdvance, payDates } = props;
+  const m = (n: number) => formatMoney(n, currencyCode);
+  const forecastSalary = estimate ? Math.max(0, estimate.net - forecastAdvance) : 0;
+  const hasForecast = !!estimate && estimate.net > 0;
+  const hasPaid = paidTotal(paid) > 0;
+  if (!hasForecast && !hasPaid) {
+    return (
+      <>
+        <SectionLabel colors={colors}>{`Выплаты · ${props.title}`}</SectionLabel>
+        <Card colors={colors}>
           <Text style={[styles.hint, { color: colors.textMuted }]}>
-            Впишите полученную сумму или задайте оклад/часовую ставку в настройках, чтобы увидеть расчёт.
+            Задайте оклад в настройках, чтобы увидеть прогноз аванса и зарплаты, или впишите суммы из расчётного листка ниже.
           </Text>
+        </Card>
+      </>
+    );
+  }
+  const diffNote = (fact: number, plan: number) => {
+    if (!hasForecast) return undefined;
+    const d = fact - plan;
+    return Math.abs(d) < 1 ? 'Совпало с прогнозом' : `Прогноз ${m(plan)} · ${d > 0 ? '+' : '−'}${m(Math.abs(d))}`;
+  };
+  return (
+    <>
+      <SectionLabel colors={colors}>{`Выплаты · ${props.title}`}</SectionLabel>
+      <Card colors={colors}>
+        {hasForecast && (
+          <View style={styles.payouts}>
+            <Payout label="Аванс" date={payDates?.advance} value={m(forecastAdvance)} colors={colors} />
+            <Payout label="Зарплата" date={payDates?.salary} value={m(forecastSalary)} colors={colors} />
+          </View>
+        )}
+        {hasForecast && (
+          <Text style={[styles.payoutsNote, { color: colors.textMuted }]}>
+            {`Прогноз: всего на руки ${m(estimate!.net)}${estimate!.bonusPercent ? ` · премия ${pct(estimate!.bonusPercent)}` : ''}`}
+          </Text>
+        )}
+        {hasPaid && (
+          <>
+            {hasForecast && <Divider colors={colors} />}
+            <Text style={[styles.subhead, { color: colors.textMuted }]}>ПРИШЛО ФАКТИЧЕСКИ</Text>
+            <Row label="Аванс" note={diffNote(paid!.advance, forecastAdvance)} value={m(paid!.advance)} colors={colors} />
+            <Divider colors={colors} />
+            <Row label="Зарплата" note={diffNote(paid!.salary, forecastSalary)} value={m(paid!.salary)} colors={colors} />
+            <Divider colors={colors} />
+            <Row
+              label="Всего на руки"
+              note={diffNote(paidTotal(paid), estimate?.net ?? 0)}
+              value={m(paidTotal(paid))}
+              colors={colors}
+              strong
+              accent={hasForecast && paidTotal(paid) - estimate!.net < -1 ? colors.danger : undefined}
+            />
+          </>
         )}
       </Card>
     </>
+  );
+}
+
+function Payout({ label, date, value, colors }: { label: string; date?: string; value: string; colors: ThemeColors }) {
+  return (
+    <View style={[styles.payout, { backgroundColor: colors.surfaceVariant }]} accessibilityLabel={`${label}${date ? ' ' + date : ''}: ${value}`}>
+      <Text style={[styles.payoutLabel, { color: colors.textSecondary }]}>{label}</Text>
+      {date ? <Text style={[styles.payoutDate, { color: colors.textMuted }]}>{date}</Text> : null}
+      <Text style={[styles.payoutValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -220,4 +341,10 @@ const styles = StyleSheet.create({
   subhead: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginTop: 12, marginBottom: 2 },
   hint: { fontSize: 13, lineHeight: 18, paddingVertical: 10 },
   remember: { marginTop: 8, marginBottom: 4 },
+  payouts: { flexDirection: 'row', gap: 10, paddingTop: 4 },
+  payout: { flex: 1, borderRadius: 14, padding: 12 },
+  payoutLabel: { fontSize: 13, fontWeight: '800' },
+  payoutDate: { fontSize: 12, fontWeight: '600', marginTop: 1 },
+  payoutValue: { fontSize: 20, fontWeight: '800', marginTop: 8, fontVariant: ['tabular-nums'] },
+  payoutsNote: { fontSize: 12, marginTop: 8, marginBottom: 4 },
 });

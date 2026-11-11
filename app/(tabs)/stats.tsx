@@ -23,7 +23,7 @@ import { LeaveMeters } from '../../components/stats/LeaveMeters';
 import { RuWorkCard } from '../../components/stats/RuWorkCard';
 import { useReceivedPay } from '../../hooks/useReceivedPay';
 import { useRuCalendarVersion } from '../../hooks/useRuCalendar';
-import { RuPaySettings, computeRuWork, estimateRuPay, payFromReceived, sumRuPay, sumRuWork } from '../../utils/ruWorkTime';
+import { PaidParts, RuPaySettings, computeAdvance, computeRuWork, estimateRuPay, payFromReceived, sumRuPay, sumRuWork } from '../../utils/ruWorkTime';
 import { Card, Divider, EmptyState, Button, Segmented, SectionLabel } from '../../components/ui/primitives';
 import { Tap } from '../../components/ui/Tap';
 import { formatDate as format, pl, tr } from '../../utils/i18n';
@@ -64,9 +64,18 @@ function Row({ label, value, colors, strong, swatch, note }: { label: string; va
   );
 }
 
+/** Дни выплаты: аванс в этом месяце, зарплата — в следующем (день ограничен длиной месяца). */
+function payDates(year: number, month: number, advanceDay: number, salaryDay: number) {
+  const clamp = (y: number, m: number, d: number) => new Date(y, m, Math.min(d, new Date(y, m + 1, 0).getDate()));
+  return {
+    advance: format(clamp(year, month, advanceDay), 'd MMMM'),
+    salary: format(clamp(year, month + 1, salaryDay), 'd MMMM'),
+  };
+}
+
 export default function StatsScreen() {
-  const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart, ruCalendar, weeklyHours, monthlySalary, ndflPercent, bonusPercent, bonusInExtras, updateSetting } = useAppSettings();
-  const { received, setMonthReceived } = useReceivedPay();
+  const { colors, baseRate, overtimeRate, paidLeaveHours, currencyCode, weekStart, ruCalendar, weeklyHours, monthlySalary, ndflPercent, bonusPercent, bonusInExtras, unionPercent, advanceMode, advanceValue, advanceMinusNdfl, advanceDay, salaryDay, updateSetting } = useAppSettings();
+  const { received, setMonthPart } = useReceivedPay();
   const ruVersion = useRuCalendarVersion();
   const {
     shiftData, overtimeData, leaveData, notesData, leaveBalances, allShifts, leaveTypes, calendars, activeCalendarId, switchCalendar,
@@ -94,26 +103,37 @@ export default function StatsScreen() {
     [period, year, shiftData, overtimeData, leaveData, allShifts, leaveTypes, paidLeaveHours]
   );
   const ruPaySettings: RuPaySettings = {
-    weeklyHours, monthlySalary, hourlyRate: baseRate, ndflPercent, bonusPercent, bonusInExtras, overtimeFirstRate: 1.5, overtimeNextRate: 2, holidayRate: 2,
+    weeklyHours, monthlySalary, hourlyRate: baseRate, ndflPercent, bonusPercent, bonusInExtras, unionPercent, overtimeFirstRate: 1.5, overtimeNextRate: 2, holidayRate: 2,
   };
   const monthKey = (m: number) => `${year}-${String(m + 1).padStart(2, '0')}`;
   const ru = useMemo(() => {
     if (!ruCalendar) return null;
     const months = period === 'month' ? [month.getMonth()] : Array.from({ length: 12 }, (_, m) => m);
-    const perMonth = months.map((m) => {
-      const work = computeRuWork({ shifts: shiftData, overtime: overtimeData, leave: leaveData, allShifts, leaveTypes, weeklyHours, ...monthRange(year, m) });
-      const got = received[monthKey(m)] ?? 0;
-      return { work, got, estimate: estimateRuPay(work, ruPaySettings), fromReceived: payFromReceived(got, work, ruPaySettings) };
-    });
+    const workInput = { shifts: shiftData, overtime: overtimeData, leave: leaveData, allShifts, leaveTypes, weeklyHours };
+    const advanceSettings = { mode: advanceMode, value: advanceValue, minusNdfl: advanceMinusNdfl };
     const hasRate = monthlySalary > 0 || baseRate > 0;
+    const perMonth = months.map((m) => {
+      const range = monthRange(year, m);
+      const work = computeRuWork({ ...workInput, ...range });
+      const firstHalf = computeRuWork({ ...workInput, fromKey: range.fromKey, toKey: range.fromKey.slice(0, 8) + '15' });
+      const parts = received[monthKey(m)];
+      const estimate = estimateRuPay(work, ruPaySettings);
+      // Аванс по прогнозу не больше всего, что причитается на руки.
+      const advance = hasRate || advanceMode === 'fixed' ? Math.min(computeAdvance(advanceSettings, ruPaySettings, work, firstHalf), hasRate ? estimate.net : Infinity) : 0;
+      return { work, parts, estimate, advance, fromReceived: payFromReceived(parts, work, ruPaySettings) };
+    });
+    const sumParts = (f: (p: PaidParts) => number) => perMonth.reduce((a, p) => a + (p.parts ? f(p.parts) : 0), 0);
     return {
       work: sumRuWork(perMonth.map((p) => p.work)),
-      received: perMonth.reduce((a, p) => a + p.got, 0),
+      paid: perMonth.some((p) => p.parts)
+        ? { advance: sumParts((p) => p.advance), salary: sumParts((p) => p.salary), union: sumParts((p) => p.union) }
+        : undefined,
       estimate: hasRate ? sumRuPay(perMonth.map((p) => p.estimate)) : null,
-      fromReceived: period === 'month' ? perMonth[0].fromReceived : null,
+      forecastAdvance: perMonth.reduce((a, p) => a + p.advance, 0),
+      fromReceived: period === 'month' ? perMonth[0].fromReceived : sumRuPay(perMonth.flatMap((p) => (p.fromReceived ? [p.fromReceived] : []))),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruCalendar, ruVersion, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, bonusPercent, bonusInExtras, received]);
+  }, [ruCalendar, ruVersion, period, monthIdx, shiftData, overtimeData, leaveData, allShifts, leaveTypes, weeklyHours, monthlySalary, baseRate, ndflPercent, bonusPercent, bonusInExtras, unionPercent, advanceMode, advanceValue, advanceMinusNdfl, received]);
   const leaveUsed = useMemo(() => leaveUsedInYear(leaveData, year), [leaveData, year]);
 
   const hasRates = baseRate > 0 || overtimeRate > 0;
@@ -307,10 +327,13 @@ export default function StatsScreen() {
                 ndflPercent={ndflPercent}
                 estimate={ru.estimate}
                 fromReceived={ru.fromReceived}
-                received={ru.received}
-                onReceivedChange={period === 'month' ? (v) => setMonthReceived(monthKey(month.getMonth()), v) : undefined}
+                paid={ru.paid}
+                onPartChange={period === 'month' ? (part, v) => setMonthPart(monthKey(month.getMonth()), part, v) : undefined}
+                forecastAdvance={ru.forecastAdvance}
+                payDates={period === 'month' ? payDates(year, month.getMonth(), advanceDay, salaryDay) : undefined}
                 bonusPercent={bonusPercent}
                 onRememberBonus={(v) => updateSetting('bonusPercent', v)}
+                unionPercent={unionPercent}
               />
             )}
 

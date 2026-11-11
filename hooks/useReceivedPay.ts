@@ -1,18 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PaidParts } from '../utils/ruWorkTime';
 
-/** Суммы, полученные на руки, по месяцам: 'yyyy-MM' → сумма. Входит в резервную копию. */
+/**
+ * Что пришло за месяц, по частям расчётного листка: 'yyyy-MM' → { аванс, зарплата, взносы }.
+ * Входит в резервную копию. Старые версии хранили одно число (всё на руки) — оно читается
+ * как зарплата без аванса.
+ */
 export const RECEIVED_PAY_KEY = 'ru_received_pay';
 
-let cache: Record<string, number> | null = null;
-const listeners = new Set<(v: Record<string, number>) => void>();
+export type ReceivedMap = Record<string, PaidParts>;
 
-function parse(raw: string | null): Record<string, number> {
+let cache: ReceivedMap | null = null;
+const listeners = new Set<(v: ReceivedMap) => void>();
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+
+function parse(raw: string | null): ReceivedMap {
   try {
     const obj = raw ? JSON.parse(raw) : {};
-    const out: Record<string, number> = {};
+    const out: ReceivedMap = {};
     for (const [k, v] of Object.entries(obj ?? {})) {
-      if (/^\d{4}-\d{2}$/.test(k) && typeof v === 'number' && v > 0) out[k] = v;
+      if (!/^\d{4}-\d{2}$/.test(k)) continue;
+      const parts: PaidParts =
+        typeof v === 'number'
+          ? { advance: 0, salary: num(v), union: 0 }
+          : { advance: num((v as any)?.advance), salary: num((v as any)?.salary), union: num((v as any)?.union) };
+      if (parts.advance || parts.salary || parts.union) out[k] = parts;
     }
     return out;
   } catch {
@@ -21,7 +35,7 @@ function parse(raw: string | null): Record<string, number> {
 }
 
 export function useReceivedPay() {
-  const [received, setReceived] = useState<Record<string, number>>(cache ?? {});
+  const [received, setReceived] = useState<ReceivedMap>(cache ?? {});
 
   useEffect(() => {
     listeners.add(setReceived);
@@ -37,14 +51,16 @@ export function useReceivedPay() {
     };
   }, []);
 
-  const setMonthReceived = useCallback((monthKey: string, amount: number) => {
+  /** Меняет одну часть выплаты за месяц. */
+  const setMonthPart = useCallback((monthKey: string, part: keyof PaidParts, amount: number) => {
     const next = { ...(cache ?? {}) };
-    if (amount > 0) next[monthKey] = amount;
+    const parts = { ...(next[monthKey] ?? { advance: 0, salary: 0, union: 0 }), [part]: amount > 0 ? amount : 0 };
+    if (parts.advance || parts.salary || parts.union) next[monthKey] = parts;
     else delete next[monthKey];
     cache = next;
     listeners.forEach((l) => l(next));
     AsyncStorage.setItem(RECEIVED_PAY_KEY, JSON.stringify(next)).catch(console.error);
   }, []);
 
-  return { received, setMonthReceived };
+  return { received, setMonthPart };
 }

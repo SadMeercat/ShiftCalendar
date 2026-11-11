@@ -8,6 +8,7 @@ import { SettingsCard, SettingsRow } from './SettingsRow';
 import { NumberField } from './PayEarningsSection';
 import { useRuSyncStatus } from '../../hooks/useRuCalendar';
 import { syncRuCalendar } from '../../utils/ruCalendarSync';
+import type { AdvanceMode } from '../../utils/ruWorkTime';
 
 function formatSyncDate(ts: number) {
   const d = new Date(ts);
@@ -30,7 +31,26 @@ interface Props {
   setBonusPercent: (v: number) => void;
   bonusInExtras: boolean;
   setBonusInExtras: (v: boolean) => void;
+  unionPercent: number;
+  setUnionPercent: (v: number) => void;
+  advanceMode: AdvanceMode;
+  setAdvanceMode: (v: AdvanceMode) => void;
+  advanceValue: number;
+  setAdvanceValue: (v: number) => void;
+  advanceMinusNdfl: boolean;
+  setAdvanceMinusNdfl: (v: boolean) => void;
+  advanceDay: number;
+  setAdvanceDay: (v: number) => void;
+  salaryDay: number;
+  setSalaryDay: (v: number) => void;
 }
+
+const ADVANCE_HINTS: Record<AdvanceMode, string> = {
+  norm: 'Оклад за первую половину месяца по норме: оклад × норма с 1 по 15 число ÷ норма месяца',
+  worked: 'Оклад за часы, отработанные с 1 по 15 число по вашему графику',
+  percent: 'Процент от оклада',
+  fixed: 'Одна и та же сумма на руки каждый месяц',
+};
 
 /** Производственный календарь РФ, норма часов и параметры расчёта зарплаты. */
 export function RuCalendarSection(props: Props) {
@@ -115,6 +135,69 @@ export function RuCalendarSection(props: Props) {
               colors={colors}
             />
             <SettingsRow
+              icon="account-group-outline"
+              title="Профсоюзные взносы, %"
+              subtitle="Процент от начисленного; 0 — если не удерживают. Если вписать взносы из листка в статистике, берётся точная сумма"
+              colors={colors}
+              right={<NumberField value={props.unionPercent} onCommit={props.setUnionPercent} colors={colors} suffix="%" max={20} label="Профсоюзные взносы, процентов" />}
+            />
+            <View style={styles.block}>
+              <Text style={[styles.label, { color: colors.text }]}>Аванс</Text>
+              <Segmented
+                options={[
+                  { value: 'norm', label: 'По норме' },
+                  { value: 'worked', label: 'По сменам' },
+                  { value: 'percent', label: '% оклада' },
+                  { value: 'fixed', label: 'Сумма' },
+                ]}
+                value={props.advanceMode}
+                onChange={(v) => {
+                  haptic.selection();
+                  props.setAdvanceMode(v as AdvanceMode);
+                }}
+                colors={colors}
+              />
+              <Text style={[styles.blockHint, { color: colors.textMuted }]}>{ADVANCE_HINTS[props.advanceMode]}</Text>
+            </View>
+            {(props.advanceMode === 'percent' || props.advanceMode === 'fixed') && (
+              <SettingsRow
+                icon="cash-fast"
+                title={props.advanceMode === 'percent' ? 'Аванс, % от оклада' : 'Аванс, сумма на руки'}
+                colors={colors}
+                right={
+                  props.advanceMode === 'percent' ? (
+                    <NumberField value={props.advanceValue} onCommit={props.setAdvanceValue} colors={colors} suffix="%" max={100} label="Аванс, процентов от оклада" />
+                  ) : (
+                    <NumberField value={props.advanceValue} onCommit={props.setAdvanceValue} colors={colors} prefix={currency.symbol} suffix="" max={1e8} label="Аванс, сумма" />
+                  )
+                }
+              />
+            )}
+            {props.advanceMode !== 'fixed' && (
+              <SettingsRow
+                icon="percent-outline"
+                title="Аванс за вычетом НДФЛ"
+                subtitle="Так платят большинство работодателей"
+                switchValue={props.advanceMinusNdfl}
+                onSwitch={props.setAdvanceMinusNdfl}
+                colors={colors}
+              />
+            )}
+            <SettingsRow
+              icon="calendar-arrow-right"
+              title="День аванса"
+              subtitle="В том же месяце"
+              colors={colors}
+              right={<NumberField value={props.advanceDay} onCommit={(v) => props.setAdvanceDay(Math.min(31, Math.max(1, Math.round(v) || 1)))} colors={colors} suffix="число" max={31} label="День выплаты аванса" />}
+            />
+            <SettingsRow
+              icon="calendar-arrow-right"
+              title="День зарплаты"
+              subtitle="В следующем месяце"
+              colors={colors}
+              right={<NumberField value={props.salaryDay} onCommit={(v) => props.setSalaryDay(Math.min(31, Math.max(1, Math.round(v) || 1)))} colors={colors} suffix="число" max={31} label="День выплаты зарплаты" />}
+            />
+            <SettingsRow
               icon="percent-outline"
               title="НДФЛ"
               subtitle="Чтобы пересчитать «на руки» в начисленное"
@@ -134,5 +217,6 @@ export function RuCalendarSection(props: Props) {
 const styles = StyleSheet.create({
   block: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
   label: { fontSize: 15, fontWeight: '700' },
+  blockHint: { fontSize: 12, lineHeight: 17 },
   hint: { fontSize: 12, lineHeight: 17, paddingHorizontal: 16, paddingBottom: 14, paddingTop: 4 },
 });

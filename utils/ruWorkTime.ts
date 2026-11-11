@@ -26,6 +26,8 @@ export interface RuPaySettings {
   bonusPercent: number;
   /** Праздники и переработка оплачиваются с учётом премии (КС РФ № 35-П). */
   bonusInExtras: boolean;
+  /** Профсоюзные взносы, % от начисленного. */
+  unionPercent: number;
   overtimeFirstRate: number;
   overtimeNextRate: number;
   holidayRate: number;
@@ -171,6 +173,8 @@ export interface RuPayBreakdown {
   overtimePay: number;
   gross: number;
   ndfl: number;
+  /** Профсоюзные взносы. */
+  union: number;
   net: number;
   /** Сколько «нормальных» часов стоит весь месяц с учётом коэффициентов. */
   weightedHours: number;
@@ -204,6 +208,7 @@ function breakdown(rate: number, k: number, source: RuPayBreakdown['rateSource']
   const overtimePay = extrasRate * h.overtime;
   const gross = regularPay + paidLeavePay + bonusPay + holidayPay + overtimePay;
   const ndfl = gross * (p.ndflPercent / 100);
+  const union = gross * (p.unionPercent / 100);
   return {
     rate: round2(rate),
     extrasRate: round2(extrasRate),
@@ -217,7 +222,8 @@ function breakdown(rate: number, k: number, source: RuPayBreakdown['rateSource']
     overtimePay: round2(overtimePay),
     gross: round2(gross),
     ndfl: round2(ndfl),
-    net: round2(gross - ndfl),
+    union: round2(union),
+    net: round2(gross - ndfl - union),
     weightedHours: round1(baseHours + h.holiday + h.overtime),
   };
 }
@@ -235,18 +241,47 @@ export function estimateRuPay(w: RuWorkStats, p: RuPaySettings): RuPayBreakdown 
   return breakdown(base.rate, p.bonusPercent / 100, base.source, w, p);
 }
 
+/** Что пришло за месяц: части выплаты, как в расчётном листке. */
+export interface PaidParts {
+  /** Аванс на руки. */
+  advance: number;
+  /** Зарплата (окончательный расчёт) на руки. */
+  salary: number;
+  /** Профсоюзные взносы из листка; 0 — посчитать по проценту из настроек. */
+  union: number;
+}
+
+export function paidTotal(parts: PaidParts | undefined): number {
+  return parts ? parts.advance + parts.salary : 0;
+}
+
 /**
- * Обратный расчёт по сумме, полученной на руки.
+ * Начислено по частям выплаты. Всё начисленное расходится на аванс, зарплату, НДФЛ и
+ * профвзносы: начислено = (аванс + зарплата + взносы) ÷ (1 − НДФЛ). Если взносы не вписаны,
+ * они берутся процентом из настроек.
+ */
+export function grossFromParts(parts: PaidParts, p: RuPaySettings): number {
+  const net = parts.advance + parts.salary;
+  const ndfl = Math.min(p.ndflPercent, 99) / 100;
+  if (parts.union > 0) return (net + parts.union) / (1 - ndfl);
+  return net / Math.max(0.01, 1 - ndfl - p.unionPercent / 100);
+}
+
+/**
+ * Обратный расчёт по тому, что пришло за месяц.
  * Если задан оклад (или ставка), всё, что сверх оклада, праздников и переработки, — это
  * премия: находим её процент и раскладываем сумму. Без оклада находим только ставку в час.
+ * Если взносы вписаны, их процент берётся из листка, а не из настроек.
  */
-export function payFromReceived(received: number, w: RuWorkStats, p: RuPaySettings): RuPayBreakdown | null {
+export function payFromReceived(parts: PaidParts | undefined, w: RuWorkStats, p: RuPaySettings): RuPayBreakdown | null {
+  if (!parts || paidTotal(parts) <= 0) return null;
   const h = weightedHours(w, p);
   const total = h.regular + h.leave + h.holiday + h.overtime;
-  if (!(received > 0) || total <= 0) return null;
-  const gross = received / (1 - Math.min(p.ndflPercent, 99) / 100);
+  if (total <= 0) return null;
+  const gross = grossFromParts(parts, p);
+  const pp: RuPaySettings = parts.union > 0 ? { ...p, unionPercent: (parts.union / gross) * 100 } : p;
   const base = baseRate(w, p);
-  if (!base) return breakdown(gross / total, 0, 'received', w, p);
+  if (!base) return breakdown(gross / total, 0, 'received', w, pp);
 
   const b = base.rate;
   const baseHours = h.regular + h.leave;
@@ -259,7 +294,44 @@ export function payFromReceived(received: number, w: RuWorkStats, p: RuPaySettin
     // gross = b·(1+k)·baseHours + b·extras
     k = baseHours > 0 ? (gross - b * extras) / (b * baseHours) - 1 : 0;
   }
-  return breakdown(b, k, base.source, w, p);
+  return breakdown(b, k, base.source, w, pp);
+}
+
+export type AdvanceMode = 'worked' | 'norm' | 'percent' | 'fixed';
+
+export interface AdvanceSettings {
+  mode: AdvanceMode;
+  /** Процент от оклада (mode 'percent') или сумма (mode 'fixed'). */
+  value: number;
+  /** Аванс выплачивается за вычетом НДФЛ. */
+  minusNdfl: boolean;
+}
+
+/**
+ * Аванс на руки.
+ * - worked: оклад ÷ норма месяца × часы, отработанные с 1 по 15 число;
+ * - norm: оклад × норма с 1 по 15 ÷ норма месяца (половина месяца по календарю);
+ * - percent: процент от оклада;
+ * - fixed: фиксированная сумма (уже на руки, НДФЛ не вычитается).
+ * Округляется до рубля.
+ */
+export function computeAdvance(
+  a: AdvanceSettings,
+  p: RuPaySettings,
+  month: RuWorkStats,
+  firstHalf: RuWorkStats
+): number {
+  if (a.mode === 'fixed') return Math.max(0, Math.round(a.value));
+  const salary = p.monthlySalary > 0 ? p.monthlySalary : p.hourlyRate * month.normHours;
+  if (!(salary > 0)) return 0;
+  let gross = 0;
+  if (a.mode === 'percent') gross = (salary * a.value) / 100;
+  else if (month.normHours > 0) {
+    const rate = salary / month.normHours;
+    gross = a.mode === 'worked' ? rate * firstHalf.workedHours : rate * firstHalf.normHours;
+  }
+  const net = a.minusNdfl ? gross * (1 - p.ndflPercent / 100) : gross;
+  return Math.max(0, Math.round(net));
 }
 
 /** Сумма помесячных показателей (переработка считается по каждому месяцу отдельно). */
@@ -293,6 +365,7 @@ export function sumRuPay(list: RuPayBreakdown[]): RuPayBreakdown | null {
     overtimePay: s((p) => p.overtimePay),
     gross,
     ndfl: s((p) => p.ndfl),
+    union: s((p) => p.union),
     net: s((p) => p.net),
     weightedHours: round1(weighted),
   };

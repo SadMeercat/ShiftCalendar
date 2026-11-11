@@ -329,6 +329,18 @@ export default function SettingsScreen() {
           setBonusPercent={(v) => updateSetting('bonusPercent', v)}
           bonusInExtras={settings.bonusInExtras}
           setBonusInExtras={(v) => updateSetting('bonusInExtras', v)}
+          unionPercent={settings.unionPercent}
+          setUnionPercent={(v) => updateSetting('unionPercent', v)}
+          advanceMode={settings.advanceMode}
+          setAdvanceMode={(v) => updateSetting('advanceMode', v)}
+          advanceValue={settings.advanceValue}
+          setAdvanceValue={(v) => updateSetting('advanceValue', v)}
+          advanceMinusNdfl={settings.advanceMinusNdfl}
+          setAdvanceMinusNdfl={(v) => updateSetting('advanceMinusNdfl', v)}
+          advanceDay={settings.advanceDay}
+          setAdvanceDay={(v) => updateSetting('advanceDay', v)}
+          salaryDay={settings.salaryDay}
+          setSalaryDay={(v) => updateSetting('salaryDay', v)}
         />
 
         <LeaveBalanceSection
