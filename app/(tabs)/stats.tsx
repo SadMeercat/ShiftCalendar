@@ -120,16 +120,19 @@ export default function StatsScreen() {
       const estimate = estimateRuPay(work, ruPaySettings);
       // Аванс по прогнозу не больше всего, что причитается на руки.
       const advance = hasRate || advanceMode === 'fixed' ? Math.min(computeAdvance(advanceSettings, ruPaySettings, work, firstHalf), hasRate ? estimate.net : Infinity) : 0;
-      return { work, parts, estimate, advance, fromReceived: payFromReceived(parts, work, ruPaySettings) };
+      // Отпускные по прогнозу: отпуск этого месяца по ставке с премией, за вычетом НДФЛ.
+      const vacation = hasRate ? Math.round(estimate.leaveTotal * (1 - ndflPercent / 100) * 100) / 100 : 0;
+      return { work, parts, estimate, advance, vacation, fromReceived: payFromReceived(parts, work, ruPaySettings) };
     });
     const sumParts = (f: (p: PaidParts) => number) => perMonth.reduce((a, p) => a + (p.parts ? f(p.parts) : 0), 0);
     return {
       work: sumRuWork(perMonth.map((p) => p.work)),
       paid: perMonth.some((p) => p.parts)
-        ? { advance: sumParts((p) => p.advance), salary: sumParts((p) => p.salary), union: sumParts((p) => p.union) }
+        ? { advance: sumParts((p) => p.advance), salary: sumParts((p) => p.salary), union: sumParts((p) => p.union), vacation: sumParts((p) => p.vacation) }
         : undefined,
       estimate: hasRate ? sumRuPay(perMonth.map((p) => p.estimate)) : null,
       forecastAdvance: perMonth.reduce((a, p) => a + p.advance, 0),
+      forecastVacation: perMonth.reduce((a, p) => a + p.vacation, 0),
       fromReceived: period === 'month' ? perMonth[0].fromReceived : sumRuPay(perMonth.flatMap((p) => (p.fromReceived ? [p.fromReceived] : []))),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -330,6 +333,7 @@ export default function StatsScreen() {
                 paid={ru.paid}
                 onPartChange={period === 'month' ? (part, v) => setMonthPart(monthKey(month.getMonth()), part, v) : undefined}
                 forecastAdvance={ru.forecastAdvance}
+                forecastVacation={ru.forecastVacation}
                 payDates={period === 'month' ? payDates(year, month.getMonth(), advanceDay, salaryDay) : undefined}
                 bonusPercent={bonusPercent}
                 onRememberBonus={(v) => updateSetting('bonusPercent', v)}

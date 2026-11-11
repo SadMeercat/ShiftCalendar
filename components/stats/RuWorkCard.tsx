@@ -36,6 +36,8 @@ interface Props {
   onPartChange?: (part: keyof PaidParts, amount: number) => void;
   /** Аванс по прогнозу (за год — сумма). */
   forecastAdvance: number;
+  /** Отпускные по прогнозу на руки (0 — отпуска нет). */
+  forecastVacation: number;
   /** Даты выплат (только для месяца). */
   payDates?: { advance: string; salary: string };
   /** Процент профвзносов из настроек: по нему видно, от какой суммы взяты взносы. */
@@ -87,7 +89,13 @@ function PayRows({ pay, colors, currencyCode, ndflPercent, work, unionPercent = 
       {pay.paidLeavePay > 0 && (
         <>
           <Divider colors={colors} />
-          <Row label="Оплачиваемый отпуск" note={`${formatHoursRu(work.paidLeaveNormHours)} по норме`} value={m(pay.paidLeavePay)} colors={colors} />
+          <Row label="Оплачиваемый отпуск" note={`${formatHoursRu(work.paidLeaveNormHours)} по норме по окладу; отпускные считаются по среднему заработку`} value={m(pay.paidLeavePay)} colors={colors} />
+        </>
+      )}
+      {pay.vacationPay > 0 && (
+        <>
+          <Divider colors={colors} />
+          <Row label="Отпускные" note="Начислено, из полученных отпускных" value={m(pay.vacationPay)} colors={colors} />
         </>
       )}
       {hasBase && (
@@ -193,6 +201,8 @@ export function RuWorkCard(props: Props) {
             <Divider colors={colors} />
             <PartField label="Зарплата" note="Окончательный расчёт за месяц" value={paid?.salary ?? 0} onChange={(v) => props.onPartChange!('salary', v)} colors={colors} symbol={currency.symbol} />
             <Divider colors={colors} />
+            <PartField label="Отпускные" note="Если в этом месяце был отпуск — пришли отдельно" value={paid?.vacation ?? 0} onChange={(v) => props.onPartChange!('vacation', v)} colors={colors} symbol={currency.symbol} />
+            <Divider colors={colors} />
             <PartField
               label="Профсоюзные взносы"
               note={props.unionPercent ? `Из листка. Пусто — ${pct(props.unionPercent, 2)} от начисленного` : 'Из листка, если удерживают'}
@@ -258,9 +268,9 @@ function PartField({ label, note, value, onChange, colors, symbol }: { label: st
 
 /** Сколько придёт авансом и зарплатой: прогноз и, если вписано, факт. */
 function PayoutsCard(props: Props) {
-  const { colors, currencyCode, estimate, paid, forecastAdvance, payDates } = props;
+  const { colors, currencyCode, estimate, paid, forecastAdvance, forecastVacation, payDates } = props;
   const m = (n: number) => formatMoney(n, currencyCode);
-  const forecastSalary = estimate ? Math.max(0, estimate.net - forecastAdvance) : 0;
+  const forecastSalary = estimate ? Math.max(0, estimate.net - forecastAdvance - forecastVacation) : 0;
   const hasForecast = !!estimate && estimate.net > 0;
   const hasPaid = paidTotal(paid) > 0;
   if (!hasForecast && !hasPaid) {
@@ -290,6 +300,11 @@ function PayoutsCard(props: Props) {
             <Payout label="Зарплата" date={payDates?.salary} value={m(forecastSalary)} colors={colors} />
           </View>
         )}
+        {hasForecast && forecastVacation > 0 && (
+          <View style={[styles.payouts, styles.payoutsGap]}>
+            <Payout label="Отпускные" date="за 3 дня до отпуска" value={m(forecastVacation)} colors={colors} />
+          </View>
+        )}
         {hasForecast && (
           <Text style={[styles.payoutsNote, { color: colors.textMuted }]}>
             {`Прогноз: всего на руки ${m(estimate!.net)}${estimate!.bonusPercent ? ` · премия ${pct(estimate!.bonusPercent)}` : ''}`}
@@ -303,6 +318,12 @@ function PayoutsCard(props: Props) {
             <Divider colors={colors} />
             <Row label="Зарплата" note={diffNote(paid!.salary, forecastSalary)} value={m(paid!.salary)} colors={colors} />
             <Divider colors={colors} />
+            {(paid!.vacation > 0 || forecastVacation > 0) && (
+              <>
+                <Row label="Отпускные" note={diffNote(paid!.vacation, forecastVacation)} value={m(paid!.vacation)} colors={colors} />
+                <Divider colors={colors} />
+              </>
+            )}
             <Row
               label="Всего на руки"
               note={diffNote(paidTotal(paid), estimate?.net ?? 0)}
@@ -346,5 +367,6 @@ const styles = StyleSheet.create({
   payoutLabel: { fontSize: 13, fontWeight: '800' },
   payoutDate: { fontSize: 12, fontWeight: '600', marginTop: 1 },
   payoutValue: { fontSize: 20, fontWeight: '800', marginTop: 8, fontVariant: ['tabular-nums'] },
+  payoutsGap: { paddingTop: 10 },
   payoutsNote: { fontSize: 12, marginTop: 8, marginBottom: 4 },
 });

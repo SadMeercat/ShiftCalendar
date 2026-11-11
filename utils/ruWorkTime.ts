@@ -169,6 +169,10 @@ export interface RuPayBreakdown {
   regularPay: number;
   paidLeavePay: number;
   bonusPay: number;
+  /** Отпускные по листку (начислено). В прогнозе 0 — там отпуск в paidLeavePay и премии. */
+  vacationPay: number;
+  /** Отпуск по прогнозу с премией (начислено): примерно столько придёт отпускными. */
+  leaveTotal: number;
   holidayPay: number;
   overtimePay: number;
   gross: number;
@@ -218,6 +222,8 @@ function breakdown(rate: number, k: number, source: RuPayBreakdown['rateSource']
     regularPay: round2(regularPay),
     paidLeavePay: round2(paidLeavePay),
     bonusPay: round2(bonusPay),
+    vacationPay: 0,
+    leaveTotal: round2(paidLeavePay * (1 + k)),
     holidayPay: round2(holidayPay),
     overtimePay: round2(overtimePay),
     gross: round2(gross),
@@ -249,10 +255,12 @@ export interface PaidParts {
   salary: number;
   /** Профсоюзные взносы из листка; 0 — посчитать по проценту из настроек. */
   union: number;
+  /** Отпускные на руки (приходят отдельно, до отпуска). */
+  vacation: number;
 }
 
 export function paidTotal(parts: PaidParts | undefined): number {
-  return parts ? parts.advance + parts.salary : 0;
+  return parts ? parts.advance + parts.salary + parts.vacation : 0;
 }
 
 /**
@@ -260,7 +268,7 @@ export function paidTotal(parts: PaidParts | undefined): number {
  * профвзносы: начислено = (аванс + зарплата + взносы) ÷ (1 − НДФЛ). Если взносы не вписаны,
  * они берутся процентом из настроек.
  */
-export function grossFromParts(parts: PaidParts, p: RuPaySettings): number {
+export function grossFromParts(parts: Omit<PaidParts, 'vacation'>, p: RuPaySettings): number {
   const net = parts.advance + parts.salary;
   const ndfl = Math.min(p.ndflPercent, 99) / 100;
   if (parts.union > 0) return (net + parts.union) / (1 - ndfl);
@@ -275,13 +283,29 @@ export function grossFromParts(parts: PaidParts, p: RuPaySettings): number {
  */
 export function payFromReceived(parts: PaidParts | undefined, w: RuWorkStats, p: RuPaySettings): RuPayBreakdown | null {
   if (!parts || paidTotal(parts) <= 0) return null;
+  const ndflShare = Math.min(p.ndflPercent, 99) / 100;
+  // Отпускные считаются по среднему заработку и приходят отдельно: оклад и премию
+  // раскладываем без них, а отпускные добавляем отдельной строкой.
+  const vacationGross = parts.vacation / (1 - ndflShare);
+  if (parts.vacation > 0) w = { ...w, paidLeaveNormHours: 0 };
+  const withVacation = (r: RuPayBreakdown): RuPayBreakdown => {
+    if (!(vacationGross > 0)) return r;
+    const gross = r.gross + vacationGross;
+    const ndfl = gross * ndflShare;
+    return { ...r, vacationPay: round2(vacationGross), gross: round2(gross), ndfl: round2(ndfl), net: round2(gross - ndfl - r.union) };
+  };
   const h = weightedHours(w, p);
   const total = h.regular + h.leave + h.holiday + h.overtime;
-  if (total <= 0) return null;
-  const gross = grossFromParts(parts, p);
-  const pp: RuPaySettings = parts.union > 0 ? { ...p, unionPercent: (parts.union / gross) * 100 } : p;
+  const gross = parts.advance + parts.salary > 0 ? grossFromParts(parts, p) : 0;
+  const pp: RuPaySettings = parts.union > 0 && gross > 0 ? { ...p, unionPercent: (parts.union / gross) * 100 } : p;
+  if (gross <= 0 || total <= 0) {
+    // Смен в этом месяце нет (или пришли только отпускные): показываем начисленное одной суммой.
+    const r = breakdown(0, 0, 'received', w, { ...pp, unionPercent: 0 });
+    const union = gross * (pp.unionPercent / 100);
+    return withVacation({ ...r, regularPay: round2(gross), gross: round2(gross), union: round2(union), ndfl: round2(gross * ndflShare), net: round2(gross * (1 - ndflShare) - union) });
+  }
   const base = baseRate(w, p);
-  if (!base) return breakdown(gross / total, 0, 'received', w, pp);
+  if (!base) return withVacation(breakdown(gross / total, 0, 'received', w, pp));
 
   const b = base.rate;
   const baseHours = h.regular + h.leave;
@@ -294,7 +318,7 @@ export function payFromReceived(parts: PaidParts | undefined, w: RuWorkStats, p:
     // gross = b·(1+k)·baseHours + b·extras
     k = baseHours > 0 ? (gross - b * extras) / (b * baseHours) - 1 : 0;
   }
-  return breakdown(b, k, base.source, w, pp);
+  return withVacation(breakdown(b, k, base.source, w, pp));
 }
 
 export type AdvanceMode = 'worked' | 'norm' | 'percent' | 'fixed';
@@ -312,6 +336,8 @@ export interface AdvanceSettings {
  * - worked: оклад ÷ норма месяца × часы, отработанные с 1 по 15 число;
  * - norm: оклад × норма с 1 по 15 ÷ норма месяца (половина месяца по календарю);
  * - percent: процент от оклада;
+ * В режимах norm и percent аванс уменьшается за отпуск/больничный с 1 по 15 число —
+ * пропорционально норме, которая на них пришлась.
  * - fixed: фиксированная сумма (уже на руки, НДФЛ не вычитается).
  * Округляется до рубля.
  */
@@ -325,10 +351,11 @@ export function computeAdvance(
   const salary = p.monthlySalary > 0 ? p.monthlySalary : p.hourlyRate * month.normHours;
   if (!(salary > 0)) return 0;
   let gross = 0;
-  if (a.mode === 'percent') gross = (salary * a.value) / 100;
+  const presentShare = firstHalf.normHours > 0 ? Math.max(0, firstHalf.normHours - firstHalf.leaveNormHours) / firstHalf.normHours : 1;
+  if (a.mode === 'percent') gross = ((salary * a.value) / 100) * presentShare;
   else if (month.normHours > 0) {
     const rate = salary / month.normHours;
-    gross = a.mode === 'worked' ? rate * firstHalf.workedHours : rate * firstHalf.normHours;
+    gross = a.mode === 'worked' ? rate * firstHalf.workedHours : rate * firstHalf.normHours * presentShare;
   }
   const net = a.minusNdfl ? gross * (1 - p.ndflPercent / 100) : gross;
   return Math.max(0, Math.round(net));
@@ -361,6 +388,8 @@ export function sumRuPay(list: RuPayBreakdown[]): RuPayBreakdown | null {
     regularPay: s((p) => p.regularPay),
     paidLeavePay: s((p) => p.paidLeavePay),
     bonusPay,
+    vacationPay: s((p) => p.vacationPay),
+    leaveTotal: s((p) => p.leaveTotal),
     holidayPay: s((p) => p.holidayPay),
     overtimePay: s((p) => p.overtimePay),
     gross,
